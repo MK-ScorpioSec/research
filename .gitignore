@@ -1,0 +1,23 @@
+# Secrets
+*.env
+.env.*
+secrets/
+*.key
+*.pem
+
+# Datos internos
+*_internal*
+token_map*.json
+reports/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
