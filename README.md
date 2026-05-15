@@ -11,7 +11,7 @@
 
 | Study | Description | Status |
 |-------|-------------|--------|
-| TerraGoat gap analysis | 169 undocumented findings across Checkov, Trivy, and pq-audit | `coming soon` |
+| [TerraGoat gap analysis](terragoat-2026-04/) | 174 undocumented findings across Checkov, Trivy, and pq-audit. Running only the official scanner shows 23% of actual exposure. | `ready` |
 
 ---
 

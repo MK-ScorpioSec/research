@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-05-06T07:09:02.102266+00:00",
+  "scope": "cloud",
+  "summary": {
+    "total_findings": 2,
+    "by_risk": {
+      "BROKEN_NOW": 1,
+      "SNDL_VULNERABLE": 0,
+      "TRANSITION_REQUIRED": 0,
+      "PQ_HYBRID_MISSING": 0,
+      "PQ_SAFE": 0
+    }
+  },
+  "remediation_plan": {
+    "immediate_actions_broken": {
+      "deadline": "30 dias",
+      "rationale": "Ya roto clasicamente. Riesgo operativo actual.",
+      "count": 1,
+      "items": [
+        {
+          "layer": "CLOUD",
+          "file": "/tmp/terragoat/terraform/azure/app_service.tf",
+          "line": 29,
+          "description": "Min TLS 1.0/1.1 configurado",
+          "risk": "BROKEN_NOW",
+          "match": "min_tls_version = \"1.1\""
+        }
+      ]
+    },
+    "short_term_sndl": {
+      "deadline": "6-12 meses",
+      "rationale": "Store-Now-Decrypt-Later. Data long-lived en riesgo con CRQC ~2030s.",
+      "count": 0,
+      "items": []
+    },
+    "medium_term_transition": {
+      "deadline": "12-24 meses",
+      "rationale": "Migrar a PQ hybrid o primitivas mas fuertes antes 2030.",
+      "count": 0
+    },
+    "long_term_hybrid": {
+      "deadline": "24-36 meses",
+      "rationale": "Adoptar hybrid PQC (NIST FIPS 203/204/205).",
+      "count": 0
+    }
+  },
+  "findings": [
+    {
+      "layer": "CLOUD",
+      "file": "/tmp/terragoat/terraform/azure/app_service.tf",
+      "line": 29,
+      "description": "Min TLS 1.0/1.1 configurado",
+      "risk": "BROKEN_NOW",
+      "match": "min_tls_version = \"1.1\""
+    },
+    {
+      "layer": "CLOUD",
+      "note": "Complementar con cloud_analysis_dispatcher.py para audit completo (Prowler/Scout Suite)",
+      "reference": "scripts/cloud/cloud_analysis_dispatcher.py"
+    }
+  ]
+}

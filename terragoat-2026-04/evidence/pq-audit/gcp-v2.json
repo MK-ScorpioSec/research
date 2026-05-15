@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-05-06T07:09:01.960039+00:00",
+  "scope": "cloud",
+  "summary": {
+    "total_findings": 1,
+    "by_risk": {
+      "BROKEN_NOW": 0,
+      "SNDL_VULNERABLE": 0,
+      "TRANSITION_REQUIRED": 0,
+      "PQ_HYBRID_MISSING": 0,
+      "PQ_SAFE": 0
+    }
+  },
+  "remediation_plan": {
+    "immediate_actions_broken": {
+      "deadline": "30 dias",
+      "rationale": "Ya roto clasicamente. Riesgo operativo actual.",
+      "count": 0,
+      "items": []
+    },
+    "short_term_sndl": {
+      "deadline": "6-12 meses",
+      "rationale": "Store-Now-Decrypt-Later. Data long-lived en riesgo con CRQC ~2030s.",
+      "count": 0,
+      "items": []
+    },
+    "medium_term_transition": {
+      "deadline": "12-24 meses",
+      "rationale": "Migrar a PQ hybrid o primitivas mas fuertes antes 2030.",
+      "count": 0
+    },
+    "long_term_hybrid": {
+      "deadline": "24-36 meses",
+      "rationale": "Adoptar hybrid PQC (NIST FIPS 203/204/205).",
+      "count": 0
+    }
+  },
+  "findings": [
+    {
+      "layer": "CLOUD",
+      "note": "Complementar con cloud_analysis_dispatcher.py para audit completo (Prowler/Scout Suite)",
+      "reference": "scripts/cloud/cloud_analysis_dispatcher.py"
+    }
+  ]
+}
