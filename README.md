@@ -25,6 +25,24 @@ Each study applies the full MK ScorpioSec research pipeline:
 
 ---
 
+## Open Source Tools
+
+Tools developed or maintained by MK ScorpioSec and used in this research:
+
+| Tool | Description | License |
+|------|-------------|---------|
+| [pq-audit](https://github.com/MK-ScorpioSec/pq-audit) | Post-quantum cryptography audit framework — 9-layer scan (code, cloud, IaC, certs, network, containers) with BROKEN_NOW / SNDL_VULNERABLE classification | Apache 2.0 |
+
+Third-party tools used across studies:
+
+| Tool | Vendor | License |
+|------|--------|---------|
+| [Trivy](https://github.com/aquasecurity/trivy) | Aqua Security | Apache 2.0 |
+| [Checkov](https://github.com/bridgecrewio/checkov) | Bridgecrew / Palo Alto | Apache 2.0 |
+| [TruffleHog](https://github.com/trufflesecurity/trufflehog) | Truffle Security | AGPL-3.0 |
+
+---
+
 ## Contact
 
 Security disclosure: [GitHub Security Advisories](https://github.com/mk-scorpiosec/research/security/advisories)

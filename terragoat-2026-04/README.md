@@ -41,12 +41,31 @@ Full report: [FINDINGS.md](FINDINGS.md)
 
 ---
 
+## Report
+
+A full security assessment report was generated from this analysis using the MK ScorpioSec report pipeline.
+
+![Consolidated Risk Matrix](assets/TerraGoat-Consolidated_Risk_Matrix-Demo.png)
+
+*Consolidated risk matrix — 12 selected findings across 4 severity tiers, 3 cloud providers.*
+
+The report includes executive summary, per-finding CVSS scores, reproduction commands, Terraform remediation code, and a post-quantum cryptography layer not covered by any conventional scanner.
+
+- **Demo PDF**: [`Reporte-TerraGoat-MK-ScorpioSec-Demo.pdf`](Reporte-TerraGoat-MK-ScorpioSec-Demo.pdf) — watermarked SAMPLE REPORT
+- **Structured data**: [`terragoat_report_data.json`](terragoat_report_data.json) — machine-readable findings used to generate the report
+
+---
+
 ## Files
 
 ```
 terragoat-2026-04/
-├── README.md          ← this file
-├── FINDINGS.md        ← full technical report
+├── README.md                              ← this file
+├── FINDINGS.md                            ← full technical report
+├── terragoat_report_data.json             ← structured findings data
+├── Reporte-TerraGoat-MK-ScorpioSec-Demo.pdf  ← demo report (watermarked)
+├── assets/
+│   └── TerraGoat-Consolidated_Risk_Matrix-Demo.png
 └── evidence/
     ├── trivy-aws.json         (120 findings, full severity)
     ├── trivy-gcp.json         (40 findings, full severity)
