@@ -1,9 +1,9 @@
 # TerraGoat IaC Security Gap Analysis
 ## MK ScorpioSec Research Series #1
 
-> **TL;DR**: Running only Checkov against TerraGoat (the "official" scanner) surfaces 56 findings.
-> Running Trivy + pq-audit against the same code reveals **243 findings — 174 undocumented**.
-> You're seeing 23% of your exposure if you trust a single scanner.
+> **TL;DR**: Bridgecrew's official documentation covers 56 TerraGoat findings (all via Checkov).
+> Running Trivy + pq-audit against the same code reveals **243 findings — 173 undocumented**.
+> You're seeing 23% of your exposure if you trust the official documentation alone.
 
 ---
 
@@ -21,9 +21,9 @@ This study applies a multi-scanner pipeline against TerraGoat and maps the **gap
 |---|---|---|
 | Checkov (official tool) | 56 | ✅ Yes |
 | Trivy (Aqua Security) | 243 | ❌ 187 undocumented |
-| pq-audit v2 (crypto lens) | 3 | ❌ 0 documented |
+| pq-audit v2 (crypto lens) | 2 | ❌ 0 documented |
 
-**174 findings are not covered in the official TerraGoat documentation.**
+**173 findings are not covered in the official TerraGoat documentation.**
 
 The most critical undocumented finding: Azure `app_service.tf:29` — TLS minimum set to 1.0/1.1. This is **BROKEN_NOW** (broken by classical standards today, not just post-quantum).
 
@@ -51,7 +51,7 @@ terragoat-2026-04/
     ├── trivy-aws.json         (120 findings, full severity)
     ├── trivy-gcp.json         (40 findings, full severity)
     ├── trivy-azure.json       (83 findings, full severity)
-    ├── checkov-aws.json       (56 findings, Checkov documented)
+    ├── checkov-aws.json       (215 terraform + 4 secrets + 2 dockerfile — Bridgecrew documents 56)
     └── pq-audit/
         ├── aws-v2.json        (2 PQC findings)
         ├── azure-v2.json      (1 BROKEN_NOW finding — TLS 1.0/1.1)
@@ -65,6 +65,30 @@ terragoat-2026-04/
 > "If a vendor is selling you 'one tool covers everything,' they're selling you risk."
 
 Running multiple scanners isn't paranoia — it's the only way to understand your actual attack surface. This study exists to make that gap visible and reproducible.
+
+---
+
+## Tools Used
+
+| Tool | Vendor | License |
+|---|---|---|
+| [Trivy](https://github.com/aquasecurity/trivy) | Aqua Security | Apache 2.0 |
+| [Checkov](https://github.com/bridgecrewio/checkov) | Bridgecrew / Palo Alto | Apache 2.0 |
+| [TruffleHog](https://github.com/trufflesecurity/trufflehog) | Truffle Security | AGPL-3.0 |
+| [pq-audit](https://github.com/MK-ScorpioSec/pq-audit) | MK ScorpioSec | Apache 2.0 |
+
+---
+
+## Found Something Similar in Your Stack?
+
+If this research surfaces issues in your environment, MK ScorpioSec offers:
+
+- Remediation playbooks tailored to your findings
+- YARA rules for detection of active exploitation patterns
+- Identity/access hardening (Okta, AWS IAM, GCP IAM)
+- Implementation engagement + retest validation
+
+→ [mkscorpiosec.com](https://mkscorpiosec.com) · mike@mkscorpiosec.com
 
 ---
 

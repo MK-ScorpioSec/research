@@ -97,7 +97,7 @@ trufflehog filesystem ./terragoat --only-verified --json
 |---|---|---|---|---|---|
 | AWS | pq-audit v2 | SNDL_VULNERABLE | db-app.tf | 150 | SG egress 0.0.0.0/0 — data in transit exposed under SNDL threat model |
 | Azure | pq-audit v2 | **BROKEN_NOW** | app_service.tf | 29 | Min TLS 1.0/1.1 configured — **broken today, not just post-quantum** |
-| GCP | pq-audit v2 | — | — | — | 0 crypto findings in v2 (FPs eliminated) |
+| GCP | pq-audit v2 | — | — | — | 0 crypto findings in v2. Note: gcp-v2.json `total_findings:1` was a metadata note (cloud_analysis_dispatcher reference), not a security finding — confirmed FP, corrected to 0. |
 
 **pq-audit v2 score: 7/10** (vs 3/10 v1 — FPs eliminated, 2 real findings verified)
 
@@ -115,8 +115,8 @@ When cross-referenced with pq-audit's crypto-specific layer, an additional **3 f
 |---|---|---|
 | Checkov (official) | 56 | ✅ Yes |
 | Trivy | 243 | ❌ 187 undocumented |
-| pq-audit v2 | 3 | ❌ 0 documented |
-| **Net gap** | **174** | **undocumented** |
+| pq-audit v2 | 2 | ❌ 0 documented |
+| **Net gap** | **173** | **undocumented** |
 
 > If your team chose Checkov because it's "official," you're seeing ~23% of your actual exposure — not because Checkov is bad, but because the documentation doesn't tell you what it *doesn't* cover.
 

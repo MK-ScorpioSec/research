@@ -2,7 +2,7 @@
   "timestamp": "2026-05-06T07:09:01.960039+00:00",
   "scope": "cloud",
   "summary": {
-    "total_findings": 1,
+    "total_findings": 0,
     "by_risk": {
       "BROKEN_NOW": 0,
       "SNDL_VULNERABLE": 0,
