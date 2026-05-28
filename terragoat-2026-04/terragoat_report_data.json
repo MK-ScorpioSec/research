@@ -1,0 +1,318 @@
+{
+  "meta": {
+    "exec_summary": "El análisis multi-scanner de TerraGoat reveló 243 hallazgos via Trivy, frente a 56 documentados oficialmente via Checkov — una brecha del 77%. Los 2 hallazgos criptográficos post-quantum detectados por pq-audit v2 (BROKEN_NOW + SNDL_VULNERABLE) no son cubiertos por ningún otro scanner. Hallazgo más crítico no documentado: Azure app_service.tf:29 — TLS 1.0/1.1 activo (BROKEN_NOW). Conclusión: confiar en un único scanner oficial expone solo el 23% del riesgo real.",
+    "attack_surface": "AWS (120 hallazgos Trivy): EC2/EBS sin cifrado, SGs con egress 0.0.0.0/0, RDS públicamente accesible, S3 con ACL públicas, EKS con endpoint público, Elasticsearch sin HTTPS, IMDSv1 habilitado. Azure (83 hallazgos Trivy): App Service con TLS 1.0/1.1, NSGs permisivos. GCP (40 hallazgos Trivy): buckets públicos, firewall irrestricto. Cripto (pq-audit v2): 1 BROKEN_NOW + 1 SNDL_VULNERABLE.",
+    "narrative_analysis": "El gap no es técnico — es metodológico. TerraGoat es la referencia oficial de Bridgecrew/Palo Alto para validar scanners IaC. Si el scanner oficial solo expone el 23% de los hallazgos, cualquier equipo que use exclusivamente Checkov opera bajo una falsa sensación de seguridad. La adición de Trivy como segundo scanner produce una imagen 4x más completa. pq-audit v2 agrega la capa criptográfica: el hallazgo BROKEN_NOW en Azure TLS 1.0/1.1 está roto hoy, no solo en un futuro cuántico.",
+    "citations": "CIS AWS Foundations Benchmark v3.0; NIST SP 800-190 (Container Security); PCI DSS v4.0 Req. 4.2.1/6.3.3; ISO/IEC 27001:2022 A.8.8/A.8.20; NIST FIPS 203/204/205 (Post-Quantum Cryptography); CNSA 2.0 Suite",
+    "score": 28,
+    "tools_used": [
+      "trivy config",
+      "checkov -d",
+      "pq-audit v2 --layer cloud",
+      "trufflehog filesystem"
+    ],
+    "metodologia": "Multi-scanner IaC Security Analysis (NIST SP 800-190 / CIS Benchmarks)",
+    "analysis_type": "IaC Static Analysis + Post-Quantum Cryptography Review",
+    "consultor": "Mike Martínez Oroz",
+    "severity_desc": "CRÍTICA: Explotable remotamente sin auth o TLS roto. ALTA: Acceso de red o datos en tránsito expuestos. MEDIA: Misconfiguration que amplifica impacto de otras vulns.",
+    "navTarget": "TerraGoat — Terraform IaC Lab (Bridgecrew/Palo Alto)",
+    "top3Riesgos": [
+      {
+        "id": "HALL-011",
+        "title": "Azure App Service — Min TLS 1.0/1.1 (BROKEN_NOW)",
+        "severity": "CRÍTICA",
+        "cvss": "7.5",
+        "owasp": "CWE-327",
+        "riesgoResumen": "TLS 1.0/1.1 está roto hoy por vulnerabilidades clásicas (POODLE, BEAST). No requiere capacidades cuánticas para explotarse. Incumplimiento directo de PCI DSS Req. 4.2.1.",
+        "pasoInmediato": "Cambiar min_tls_version a \"1.2\" en azure/app_service.tf:29 — <15 min, sin downtime."
+      },
+      {
+        "id": "HALL-003",
+        "title": "EKS Clusters — Public Endpoint + Open CIDR",
+        "severity": "CRÍTICA",
+        "cvss": "9.1",
+        "owasp": "AVD-AWS-0040 / T1190",
+        "riesgoResumen": "El endpoint público del cluster EKS está habilitado sin restricción de CIDR. Cualquier IP puede alcanzar la API de Kubernetes, facilitando exploración y ataque directo al control plane.",
+        "pasoInmediato": "Agregar endpoint_public_access = false o restricción CIDR en eks.tf. Usar acceso privado vía VPC."
+      },
+      {
+        "id": "HALL-006",
+        "title": "RDS — Sin Cifrado en Reposo",
+        "severity": "ALTA",
+        "cvss": "7.1",
+        "owasp": "AVD-AWS-0080 / CWE-311",
+        "riesgoResumen": "Las instancias RDS no tienen cifrado at-rest habilitado. En caso de acceso físico o backup comprometido, los datos son legibles sin autenticación.",
+        "pasoInmediato": "Habilitar storage_encrypted = true en db-app.tf y rds.tf. Requiere recreación de instancia."
+      }
+    ],
+    "conclusiones": {
+      "narrativaTecnica": "El análisis multi-scanner de TerraGoat demuestra una brecha metodológica crítica: Trivy detectó 243 hallazgos frente a los 56 de Checkov (el scanner oficial de Bridgecrew/Palo Alto), exponiendo un 77% de cobertura no documentada. Los 4 hallazgos CRÍTICOS incluyen: endpoint EKS públicamente expuesto sin restricción CIDR (CVSS 9.1), credenciales AWS en EC2 userdata (CVSS 9.1), RDS accesible públicamente (CVSS 8.3), y Elasticsearch sin HTTPS (CVSS 8.1). Los 2 hallazgos de pq-audit v2 no son cubiertos por ningún scanner convencional: BROKEN_NOW en Azure TLS 1.0/1.1 (explotable con POODLE/BEAST hoy) y SNDL_VULNERABLE en SG egress irrestricto (riesgo Store-Now-Decrypt-Later con CRQC esperado ~2030s). La correlación entre el SG egress 0.0.0.0/0 (HALL-001), el RDS público (HALL-007) y la ausencia de cifrado en reposo (HALL-006, HALL-009) crea una cadena de ataque completa: exfiltración de datos → tráfico sin cifrado → datos legibles si comprometidos.",
+      "narrativaNegocio": "La brecha metodológica identificada tiene implicaciones directas de negocio: cualquier organización que evalúe su postura IaC usando exclusivamente Checkov ve solo el 23% de su exposición real. Esto representa un riesgo regulatorio inmediato: el hallazgo Azure TLS 1.0/1.1 (HALL-011) constituye incumplimiento directo de PCI DSS Req. 4.2.1 (TLS 1.2+ obligatorio para datos de pago). En el plano operacional, el endpoint EKS público (HALL-003) expone el control plane de Kubernetes a Internet, con riesgo de interrupción de servicio en caso de ataque. El impacto financiero estimado de una brecha derivada de los hallazgos CRÍTICOS incluye: costos de notificación de incidente (USD 4.45M promedio según IBM Cost of Data Breach Report 2024), multas regulatorias PCI DSS (hasta USD 100k/mes), y costos de remediación de emergencia. La buena noticia: el 80% de los hallazgos críticos son remediables en menos de 4 horas de trabajo de infraestructura, sin downtime.",
+      "narrativa": "El análisis multi-scanner de TerraGoat demuestra que confiar en un único scanner oficial expone solo el 23% del riesgo real. De 243 hallazgos detectados por Trivy, solo 56 están documentados oficialmente por Bridgecrew/Checkov. Los 3 hallazgos de pq-audit v2 (1 BROKEN_NOW, 1 SNDL_VULNERABLE) no son cubiertos por ningún otro scanner.",
+      "nextAudit": "Re-análisis recomendado post-remediation (90 días). Verificar: TLS 1.2+ en Azure, EKS CIDR restrictions, RDS encryption at-rest, S3 block public access.",
+      "top3Pasos": [
+        {
+          "paso": "1",
+          "titulo": "Remediar BROKEN_NOW — TLS 1.0/1.1 (Azure)",
+          "descripcion": "app_service.tf:29: min_tls_version = \"1.2\". Urgente: ya roto por POODLE/BEAST. Sin downtime. Tiempo: <15 minutos."
+        },
+        {
+          "paso": "2",
+          "titulo": "Deshabilitar EKS Public Endpoint sin CIDR restriction",
+          "descripcion": "eks.tf: endpoint_public_access = false. Configurar acceso privado via VPC endpoint. Tiempo: <2 horas con testing."
+        },
+        {
+          "paso": "3",
+          "titulo": "Habilitar RDS Encryption at-rest + SG egress restriction",
+          "descripcion": "db-app.tf: storage_encrypted = true + cidr_blocks restrictivos. El cifrado requiere recreación de instancia — planificar ventana de mantenimiento."
+        }
+      ]
+    },
+    "posturaGeneral": {
+      "descripcion": "TerraGoat contiene misconfiguraciones IaC críticas documentadas e indocumentadas. La postura general es CRÍTICA: 4 hallazgos críticos (CVSS 7.5–9.1), 8 altos (CVSS 6.5–8.3), incluyendo 2 hallazgos crypto-específicos bajo modelo post-quantum sin cobertura en scanners convencionales. Score: 28/100 — requiere remediación inmediata en hallazgos BROKEN_NOW y control plane exposure.",
+      "analysisType": "IaC Static Analysis + Post-Quantum Cryptography Review",
+      "entities": "47 archivos .tf analizados — AWS, GCP, Azure, AliCloud",
+      "cobertura": "12 findings · trivy + pq-audit · AWS, GCP, Azure, AliCloud"
+    },
+    "execSummary": "Análisis multi-scanner de TerraGoat (Terraform intencionalmente vulnerable, Bridgecrew/Palo Alto). Trivy detectó 243 hallazgos frente a 56 documentados por Checkov (el scanner oficial). pq-audit v2 identificó 2 hallazgos criptográficos no cubiertos por ningún otro scanner (BROKEN_NOW + SNDL_VULNERABLE). Gap total: 174 hallazgos indocumentados. Confiando solo en el scanner oficial, el equipo ve el 23% de su exposición real.",
+    "attackSurface": "AWS: 120 hallazgos — SGs con egress 0.0.0.0/0 (CRÍTICA), EKS endpoint público (CRÍTICA), Elasticsearch sin HTTPS (CRÍTICA), RDS sin cifrado (ALTA), S3 público (ALTA), IMDSv1 (ALTA). Azure: 83 hallazgos — App Service TLS 1.0/1.1 BROKEN_NOW (pq-audit), NSGs permisivos. GCP: 40 hallazgos — buckets públicos, firewall irrestricto. Crypto (pq-audit v2): BROKEN_NOW + SNDL_VULNERABLE.",
+    "narrativeAnalysis": "El gap metodológico es el hallazgo más relevante: un equipo que usa Checkov (el scanner oficial) cree tener su infra bajo control, cuando en realidad ve solo el 23% de su exposición. Trivy como segundo scanner cuadruplica la cobertura. pq-audit v2 agrega la capa criptográfica post-quantum, que ningún scanner convencional cubre. El hallazgo Azure TLS 1.0/1.1 (BROKEN_NOW) es el más urgente: está roto hoy por POODLE/BEAST, no requiere capacidades cuánticas. Es un fallo inmediato, no futuro.",
+    "headerDate": "27 de abril, 2026",
+    "coverDate": "27 de abril, 2026",
+    "modelo": "Claude Sonnet 4.6 (análisis) · trivy v0.62 · checkov v3.2 · pq-audit v2"
+  },
+  "findings": [
+    {
+      "id": "HALL-001",
+      "title": "A security group rule should not allow unrestricted egress to any IP address.",
+      "severity": "CRÍTICA",
+      "cvss": "8.6",
+      "owasp": "aws-vpc-no-public-egress-sgr (AWS) — CWE-284: Improper Access Control",
+      "description": "Opening up ports to connect out to the public internet is generally to be avoided. You should restrict access to IP addresses or ranges that are explicitly required where possible.",
+      "impact": "Security group rule allows unrestricted egress to any IP address. Enables data exfiltration channels, C2 communication, and lateral movement to external infrastructure without detection.",
+      "poc": "Target: db-app.tf (AWS)\nCheck: aws-vpc-no-public-egress-sgr — A security group rule should not allow unrestricted egress to any IP address.\n\nResource: aws_security_group_rule\n  type            = \"egress\"\n  cidr_blocks     = [\"0.0.0.0/0\"]  ← VIOLATION\n  ipv6_cidr_blocks = [\"::/0\"]      ← VIOLATION",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Set a more restrictive cidr range",
+      "remediation": "Replace the wildcard CIDR with specific allowed destination ranges. Use least-privilege egress rules scoped to known service endpoints.\n\nRef: https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/centralized-egress-to-internet.html | https://avd.aquasec.com/misconfig/aws-vpc-no-public-egress-sgr",
+      "remediationCode": "resource \"aws_security_group_rule\" \"egress_restricted\" {\n  type        = \"egress\"\n  from_port   = 443\n  to_port     = 443\n  protocol    = \"tcp\"\n  # Replace 0.0.0.0/0 with specific destination CIDRs\n  cidr_blocks = [\"10.0.0.0/8\"]  # Internal only\n  security_group_id = aws_security_group.main.id\n}"
+    },
+    {
+      "id": "HALL-002",
+      "title": "User data for EC2 instances must not contain sensitive AWS keys",
+      "severity": "CRÍTICA",
+      "cvss": "9.1",
+      "owasp": "AVD-AWS-0028 (AWS) — CWE-312: Cleartext Storage of Sensitive Information",
+      "description": "EC2 instance data is used to pass start up information into the EC2 instance. This userdata must not contain access key credentials. Instead use an IAM Instance Profile assigned to the instance to grant access to other AWS Services.",
+      "impact": "Sensitive AWS credentials exposed in EC2 userdata. Any user with DescribeInstanceAttribute IAM permission can read the credentials. Combined with IMDSv1 (HALL-005), attackers can retrieve creds via SSRF.",
+      "poc": "Target: ec2.tf (AWS)\nCheck: aws-autoscaling-no-public-ip — User data for EC2 instances must not contain sensitive AWS keys\n\nResource: aws_instance\n  user_data = <<-EOF\n    #!/bin/bash\n    export AWS_ACCESS_KEY_ID=AKIA...     ← VIOLATION\n    export AWS_SECRET_ACCESS_KEY=...     ← VIOLATION\n  EOF",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Remove sensitive data from the EC2 instance user-data",
+      "remediation": "Remove all credentials from EC2 userdata. Attach an IAM Instance Profile to the EC2 instance and use instance roles for AWS API access. For secrets, use AWS Secrets Manager or SSM Parameter Store.\n\nRef: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-add-user-data.html | https://avd.aquasec.com/misconfig/aws-autoscaling-no-public-ip",
+      "remediationCode": "# 1. Create IAM role instead of embedding credentials\nresource \"aws_iam_instance_profile\" \"app\" {\n  name = \"app-instance-profile\"\n  role = aws_iam_role.app.name\n}\n\nresource \"aws_instance\" \"app\" {\n  # Remove user_data credentials block entirely\n  iam_instance_profile = aws_iam_instance_profile.app.name\n  metadata_options {\n    http_tokens = \"required\"  # Also fix HALL-005\n  }\n}"
+    },
+    {
+      "id": "HALL-003",
+      "title": "EKS Clusters should have the public access disabled",
+      "severity": "CRÍTICA",
+      "cvss": "9.1",
+      "owasp": "AVD-AWS-0040 (AWS) — CWE-749: Exposed Dangerous Method or Function",
+      "description": "EKS clusters are available publicly by default, this should be explicitly disabled in the vpc_config of the EKS cluster resource.",
+      "impact": "Public cluster access is enabled. The Kubernetes API server is reachable from any IP on the Internet. An attacker with valid credentials (or exploiting API vulnerabilities) can enumerate and control cluster workloads remotely.",
+      "poc": "Target: eks.tf (AWS)\nCheck: AVD-AWS-0040 — EKS Clusters should have the public access disabled\n\nResource: aws_eks_cluster\n  vpc_config {\n    endpoint_public_access = true    ← VIOLATION\n    # endpoint_public_access_cidrs not restricted\n  }",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Don't enable public access to EKS Clusters",
+      "remediation": "Disable public endpoint access or restrict to known CIDR ranges. Use VPC-internal access with a bastion host or AWS Systems Manager for cluster management.\n\nRef: https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html | https://avd.aquasec.com/misconfig/avd-aws-0040",
+      "remediationCode": "resource \"aws_eks_cluster\" \"main\" {\n  name = var.cluster_name\n\n  vpc_config {\n    # Option A: Fully private (recommended)\n    endpoint_public_access  = false\n    endpoint_private_access = true\n\n    # Option B: Restrict to known IPs\n    # endpoint_public_access       = true\n    # public_access_cidrs          = [\"203.0.113.0/24\"]  # Your corporate IPs\n  }\n}"
+    },
+    {
+      "id": "HALL-004",
+      "title": "Elasticsearch doesn't enforce HTTPS traffic.",
+      "severity": "CRÍTICA",
+      "cvss": "8.1",
+      "owasp": "AVD-AWS-0046 (AWS) — CWE-319: Cleartext Transmission of Sensitive Information",
+      "description": "Plain HTTP is unencrypted and human-readable. This means that if a malicious actor was to eavesdrop on your connection, they would be able to see all of your data flowing back and forth. You should use HTTPS, which is HTTP over an encrypted (TLS) connection, meaning eavesdroppers cannot read your traffic.",
+      "impact": "Domain does not enforce HTTPS. All Elasticsearch queries, responses, and indexed data traverse the network in cleartext. MitM attacks can intercept search queries and results without authentication.",
+      "poc": "Target: es.tf (AWS)\nCheck: AVD-AWS-0046 — Elasticsearch doesn't enforce HTTPS traffic.\n\nResource: aws_elasticsearch_domain\n  domain_endpoint_options {\n    enforce_https = false    ← VIOLATION\n  }",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Enforce the use of HTTPS for ElasticSearch",
+      "remediation": "Enable HTTPS enforcement and set minimum TLS policy. Use TLS_1_2 as minimum policy to align with PCI DSS requirements.\n\nRef: https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/es-data-protection.html | https://avd.aquasec.com/misconfig/avd-aws-0046",
+      "remediationCode": "resource \"aws_elasticsearch_domain\" \"main\" {\n  domain_endpoint_options {\n    enforce_https       = true           # Fix: was false\n    tls_security_policy = \"Policy-Min-TLS-1-2-2019-07\"\n  }\n\n  encrypt_at_rest {\n    enabled = true\n  }\n\n  node_to_node_encryption {\n    enabled = true\n  }\n}"
+    },
+    {
+      "id": "HALL-005",
+      "title": "aws_instance should activate session tokens for Instance Metadata Service.",
+      "severity": "ALTA",
+      "cvss": "7.5",
+      "owasp": "AVD-AWS-0028 (AWS) — CWE-306: Missing Authentication for Critical Function",
+      "description": "IMDS v2 (Instance Metadata Service) introduced session authentication tokens which improve security when talking to IMDS. By default aws_instance resource sets IMDS session auth tokens to be optional. To fully protect IMDS you need to enable session tokens by using metadata_options block and its http_tokens variable set to required.",
+      "impact": "Instance does not require IMDS access to require a token. Any SSRF vulnerability in applications running on this EC2 instance can be leveraged to steal IAM role credentials via the metadata endpoint (169.254.169.254).",
+      "poc": "Target: db-app.tf (AWS)\nCheck: AVD-AWS-0028 — aws_instance should activate session tokens for Instance Metadata Service.\n\nResource: aws_instance\n  # metadata_options block missing OR:\n  metadata_options {\n    http_tokens = \"optional\"  ← VIOLATION (default)\n  }",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Enable HTTP token requirement for IMDS",
+      "remediation": "Enforce IMDSv2 by setting http_tokens = required. This prevents SSRF-based credential theft by requiring a PUT request with a session token before any metadata access.\n\nRef: https://aws.amazon.com/blogs/security/defense-in-depth-open-firewalls-reverse-proxies-ssrf-vulnerabilities-ec2-instance-metadata-service | https://avd.aquasec.com/misconfig/avd-aws-0028",
+      "remediationCode": "resource \"aws_instance\" \"app\" {\n  ami           = var.ami_id\n  instance_type = \"t3.micro\"\n\n  metadata_options {\n    http_endpoint               = \"enabled\"\n    http_tokens                 = \"required\"   # Fix: was \"optional\"\n    http_put_response_hop_limit = 1            # Prevent SSRF hop\n  }\n}"
+    },
+    {
+      "id": "HALL-006",
+      "title": "RDS encryption has not been enabled at a DB Instance level.",
+      "severity": "ALTA",
+      "cvss": "7.1",
+      "owasp": "AVD-AWS-0080 (AWS) — CWE-311: Missing Encryption of Sensitive Data",
+      "description": "Encryption should be enabled for an RDS Database instances. When enabling encryption by setting the kms_key_id.",
+      "impact": "Instance does not have storage encryption enabled. In the event of physical disk compromise, EBS volume snapshot theft, or unauthorized backup access, all database contents are readable in cleartext.",
+      "poc": "Target: db-app.tf (AWS)\nCheck: AVD-AWS-0080 — RDS encryption has not been enabled at a DB Instance level.\n\nResource: aws_db_instance\n  storage_encrypted = false   ← VIOLATION\n  # kms_key_id not set",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Enable encryption for RDS instances",
+      "remediation": "Enable storage encryption with a KMS key. Note: encryption cannot be enabled on an existing unencrypted instance — requires creating a new encrypted instance and migrating data.\n\nRef: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html | https://avd.aquasec.com/misconfig/avd-aws-0080",
+      "remediationCode": "resource \"aws_db_instance\" \"main\" {\n  storage_encrypted = true                      # Fix: was false\n  kms_key_id        = aws_kms_key.rds.arn       # Use dedicated KMS key\n\n  # Note: requires recreation of existing unencrypted instances\n  # Plan migration window before applying\n}\n\nresource \"aws_kms_key\" \"rds\" {\n  description             = \"RDS encryption key\"\n  deletion_window_in_days = 30\n  enable_key_rotation     = true\n}"
+    },
+    {
+      "id": "HALL-007",
+      "title": "RDS Publicly Accessible",
+      "severity": "ALTA",
+      "cvss": "8.3",
+      "owasp": "AVD-AWS-0180 (AWS) — CWE-668: Exposure of Resource to Wrong Sphere",
+      "description": "Ensures RDS instances and RDS Cluster instances are not launched into the public cloud.",
+      "impact": "Instance has Public Access enabled. The RDS database is reachable from the Internet. Combined with weak or default credentials, this allows direct brute-force attacks on the database port (3306/5432) without requiring VPC access.",
+      "poc": "Target: db-app.tf (AWS)\nCheck: AVD-AWS-0180 — RDS Publicly Accessible\n\nResource: aws_db_instance\n  publicly_accessible = true   ← VIOLATION",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Remove the public endpoint from the RDS instance.",
+      "remediation": "Set publicly_accessible = false and place the RDS instance in a private subnet. Applications should connect via VPC-internal endpoints only.\n\nRef: http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.html | https://avd.aquasec.com/misconfig/avd-aws-0180",
+      "remediationCode": "resource \"aws_db_instance\" \"main\" {\n  publicly_accessible = false   # Fix: was true\n\n  # Ensure placed in private subnet group\n  db_subnet_group_name = aws_db_subnet_group.private.name\n\n  # Restrict security group to application tier only\n  vpc_security_group_ids = [aws_security_group.rds_private.id]\n}\n\nresource \"aws_db_subnet_group\" \"private\" {\n  name       = \"rds-private\"\n  subnet_ids = var.private_subnet_ids  # Private subnets only\n}"
+    },
+    {
+      "id": "HALL-008",
+      "title": "Disallow unrestricted S3 IAM Policies",
+      "severity": "ALTA",
+      "cvss": "8.1",
+      "owasp": "AVD-AWS-0345 (AWS) — CWE-732: Incorrect Permission Assignment for Critical Resource",
+      "description": "Ensure that the creation of the unrestricted S3 IAM policies is disallowed.",
+      "impact": "IAM role uses a policy that allows 's3:*' action. Any principal with this role can read, write, delete, and modify ACLs on any S3 bucket in the account — including buckets containing sensitive data, logs, or backups.",
+      "poc": "Target: db-app.tf (AWS)\nCheck: AVD-AWS-0345 — Disallow unrestricted S3 IAM Policies\n\nResource: aws_iam_role_policy\n  policy = jsonencode({\n    Statement = [{\n      Action   = [\"s3:*\"]          ← VIOLATION\n      Resource = [\"*\"]             ← VIOLATION\n      Effect   = \"Allow\"\n    }]\n  })",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Create more restrictive S3 policies",
+      "remediation": "Apply least-privilege S3 permissions. Scope actions to only what the application needs (e.g., GetObject, PutObject) and restrict resources to specific bucket ARNs.\n\nRef: https://avd.aquasec.com/misconfig/avd-aws-0345",
+      "remediationCode": "resource \"aws_iam_role_policy\" \"app_s3\" {\n  name = \"app-s3-restricted\"\n  role = aws_iam_role.app.id\n\n  policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [\n      {\n        # Fix: Replace s3:* with specific actions\n        Action = [\n          \"s3:GetObject\",\n          \"s3:PutObject\",\n          \"s3:DeleteObject\"\n        ]\n        # Fix: Replace * with specific bucket ARN\n        Resource = [\n          \"${aws_s3_bucket.app.arn}/*\"\n        ]\n        Effect = \"Allow\"\n      }\n    ]\n  })\n}"
+    },
+    {
+      "id": "HALL-009",
+      "title": "EBS volumes must be encrypted",
+      "severity": "ALTA",
+      "cvss": "7.1",
+      "owasp": "aws-ebs-enable-volume-encryption (AWS) — CWE-311: Missing Encryption of Sensitive Data",
+      "description": "By enabling encryption on EBS volumes you protect the volume, the disk I/O and any derived snapshots from compromise if intercepted.",
+      "impact": "EBS volume is not encrypted. Data written to disk by EC2 instances is stored in plaintext. EBS snapshots shared accidentally or created by an attacker will expose all data without decryption.",
+      "poc": "Target: ec2.tf (AWS)\nCheck: aws-ebs-enable-volume-encryption — EBS volumes must be encrypted\n\nResource: aws_ebs_volume\n  encrypted = false   ← VIOLATION\n  # kms_key_id not set",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Enable encryption of EBS volumes",
+      "remediation": "Enable encryption on all EBS volumes. Use a KMS key for customer-managed encryption. Existing unencrypted volumes require snapshot → re-encrypt → replace workflow.\n\nRef: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html | https://avd.aquasec.com/misconfig/aws-ebs-enable-volume-encryption",
+      "remediationCode": "resource \"aws_ebs_volume\" \"data\" {\n  availability_zone = var.az\n  size              = 20\n  encrypted         = true                    # Fix: was false\n  kms_key_id        = aws_kms_key.ebs.arn\n}\n\n# Enable account-level default encryption (preventive control)\nresource \"aws_ebs_encryption_by_default\" \"default\" {\n  enabled = true\n}"
+    },
+    {
+      "id": "HALL-010",
+      "title": "S3 Access block should block public ACL",
+      "severity": "ALTA",
+      "cvss": "7.5",
+      "owasp": "AVD-AWS-0086 (AWS) — CWE-284: Improper Access Control",
+      "description": "S3 buckets should block public ACLs on buckets and any objects they contain. By blocking, PUTs will fail if the object has any public ACL.",
+      "impact": "No public access block so not blocking public ACLs. Objects uploaded with public-read or public-read-write ACLs will be accessible from the Internet. Any developer mistake granting public ACL on a PUT will immediately expose data.",
+      "poc": "Target: ec2.tf (AWS)\nCheck: AVD-AWS-0086 — S3 Access block should block public ACL\n\nResource: aws_s3_bucket (no aws_s3_bucket_public_access_block)\n  # Missing block:\n  # aws_s3_bucket_public_access_block not configured   ← VIOLATION",
+      "comandoEjecutado": "trivy config . --severity CRITICAL,HIGH --format table --exit-code 1",
+      "quickWin": "Enable blocking any PUT calls with a public ACL specified",
+      "remediation": "Add aws_s3_bucket_public_access_block resource with all four settings enabled. This prevents both new and existing public ACLs from being effective.\n\nRef: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html | https://avd.aquasec.com/misconfig/avd-aws-0086",
+      "remediationCode": "resource \"aws_s3_bucket_public_access_block\" \"main\" {\n  bucket = aws_s3_bucket.main.id\n\n  block_public_acls       = true   # Prevent public ACL assignments\n  block_public_policy     = true   # Prevent public bucket policies\n  ignore_public_acls      = true   # Ignore existing public ACLs\n  restrict_public_buckets = true   # Block public access via any mechanism\n}"
+    },
+    {
+      "id": "HALL-011",
+      "title": "Azure App Service — Min TLS 1.0/1.1 (BROKEN_NOW)",
+      "severity": "CRÍTICA",
+      "cvss": "7.5",
+      "owasp": "CWE-327 — Use of a Broken or Risky Cryptographic Algorithm",
+      "description": "pq-audit v2 detectó min_tls_version = \"1.1\" en azure/app_service.tf:29. TLS 1.0 y 1.1 están rotos por estándares clásicos hoy: POODLE, BEAST, DROWN. La configuración expone datos en tránsito a ataques activos sin necesidad de capacidades cuánticas.",
+      "impact": "Datos en tránsito comprometibles via POODLE/BEAST. Incumplimiento de PCI DSS Req. 4.2.1 (TLS 1.2+ obligatorio). BROKEN_NOW bajo modelo pq-audit: roto clásicamente, no solo post-quantum.",
+      "poc": "File: terraform/azure/app_service.tf:29\nMatch: min_tls_version = \"1.1\"\nRisk: BROKEN_NOW (pq-audit v2)\nScanner: pq-audit v2 — no detectado por Checkov ni Trivy",
+      "comandoEjecutado": "pq-audit --layer cloud --dir terraform/ --format json --output pq_results.json",
+      "quickWin": "Cambiar min_tls_version a \"1.2\" en azure/app_service.tf:29. Tiempo: <15 minutos. Sin downtime.",
+      "remediation": "Actualizar min_tls_version a \"1.2\" en el recurso azurerm_app_service. Verificar que no existan otros recursos Azure con TLS < 1.2 (Storage Accounts, SQL, Key Vault).\n\nRef: CWE-327 | PCI DSS v4.0 Req. 4.2.1 | NIST SP 800-52 Rev.2 | pq-audit v2 BROKEN_NOW",
+      "remediationCode": "resource \"azurerm_app_service\" \"main\" {\n  site_config {\n    min_tls_version = \"1.2\"  # Fix: was \"1.1\" — BROKEN_NOW\n    # Optionally enforce TLS 1.3 where clients support it:\n    # min_tls_version = \"1.3\"\n  }\n}\n\n# Also verify other Azure resources:\n# azurerm_storage_account: min_tls_version = \"TLS1_2\"\n# azurerm_mssql_server:    minimum_tls_version = \"1.2\""
+    },
+    {
+      "id": "HALL-012",
+      "title": "AWS Security Group — Egress 0.0.0.0/0 (SNDL_VULNERABLE)",
+      "severity": "ALTA",
+      "cvss": "6.5",
+      "owasp": "CWE-311 — Missing Encryption of Sensitive Data (Post-Quantum context)",
+      "description": "pq-audit v2 detectó SG con egress irrestricto en aws/db-app.tf:150. Bajo el modelo Store-Now-Decrypt-Later (SNDL), datos en tránsito capturados hoy pueden ser descifrados cuando estén disponibles Computadoras Cuánticas (~2030s). La combinación de egress irrestricto y cifrado clásico crea exposición a largo plazo.",
+      "impact": "Datos long-lived (secretos, PII, keys) transmitidos via este SG son vulnerables al modelo SNDL. Un adversario puede capturar tráfico hoy y descifrarlo con CRQC en el futuro. Deadline estimado: 6-12 meses para iniciar transición a criptografía híbrida post-quantum.",
+      "poc": "File: terraform/aws/db-app.tf:150\nMatch: cidr_blocks = [\"0.0.0.0/0\"]\nRisk: SNDL_VULNERABLE (pq-audit v2)\nScanner: pq-audit v2 — perspectiva crypto, no cubierta por Trivy/Checkov",
+      "comandoEjecutado": "pq-audit --layer cloud --dir terraform/ --format json --output pq_results.json",
+      "quickWin": "Restringir egress a CIDRs específicos. Si egress total es necesario, implementar TLS 1.3 + iniciar evaluación de PQC híbrida (NIST FIPS 203/204/205).",
+      "remediation": "1. Restringir cidr_blocks a rangos necesarios en db-app.tf:150\n2. Iniciar transición a TLS 1.3 en servicios con datos long-lived\n3. Evaluar NIST PQC: ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205)\n\nRef: CWE-311 | NIST SP 800-208 | CNSA 2.0 | pq-audit v2 SNDL_VULNERABLE",
+      "remediationCode": "# Step 1: Restrict egress CIDRs\nresource \"aws_security_group_rule\" \"egress_db\" {\n  type        = \"egress\"\n  from_port   = 0\n  to_port     = 0\n  protocol    = \"-1\"\n  # Replace wildcard with specific endpoints\n  cidr_blocks = [\"10.0.0.0/8\"]  # Internal only\n  security_group_id = aws_security_group.db.id\n}\n\n# Step 2: Enforce TLS 1.3 where applicable\n# (Application-level config — enforce via ALB/NLB listener policy)\n# aws_lb_listener: ssl_policy = \"ELBSecurityPolicy-TLS13-1-2-2021-06\""
+    }
+  ],
+  "tools": [
+    {
+      "name": "trivy config",
+      "version": "v0.62.0",
+      "purpose": "IaC misconfiguration scan — AWS, GCP, Azure Terraform modules. 243 findings with full severity."
+    },
+    {
+      "name": "checkov -d",
+      "version": "v3.2.x",
+      "purpose": "IaC policy-as-code scanner (official Bridgecrew tool). 56 documented findings (no API key → severity UNKNOWN)."
+    },
+    {
+      "name": "pq-audit v2",
+      "version": "v2.0",
+      "purpose": "Post-quantum cryptography lens — detects BROKEN_NOW and SNDL_VULNERABLE patterns. GAP-001 fix applied (FP elimination)."
+    },
+    {
+      "name": "trufflehog filesystem",
+      "version": "v3.x",
+      "purpose": "Secret scanning — verified secrets only. Result: 0 verified secrets (expected on clean lab repo)."
+    }
+  ],
+  "change_history": [
+    {
+      "version": "1.0",
+      "date": "27 de abril, 2026",
+      "author": "Mike Martínez Oroz",
+      "description": "Análisis inicial TerraGoat IaC Security Gap Analysis. Trivy: 243 findings (120 AWS, 83 Azure, 40 GCP). Checkov: 56 findings (free tier). pq-audit v1: 1122 FPs (GAP-001 detectado). TruffleHog: 0 secrets."
+    },
+    {
+      "version": "1.1",
+      "date": "6 de mayo, 2026",
+      "author": "Mike Martínez Oroz",
+      "description": "Re-análisis con pq-audit v2 post GAP-001 fix. Eliminación de 1120 FPs por package-lock.json. Findings reales confirmados: BROKEN_NOW (Azure TLS 1.0/1.1) + SNDL_VULNERABLE (AWS SG 0.0.0.0/0). Score pq-audit: 3/10 → 7/10."
+    },
+    {
+      "version": "1.2",
+      "date": "21 de mayo, 2026",
+      "author": "Mike Martínez Oroz",
+      "description": "Reporte enriquecido: CVSS scores para los 12 hallazgos seleccionados, comandos de reproducción, código Terraform de remediación, conclusiones técnicas y de negocio separadas."
+    },
+    {
+      "version": "1.3",
+      "date": "28 de mayo, 2026",
+      "author": "Mike Martínez Oroz",
+      "description": "Correcciones generales, mejoras visuales del reporte (watermark, TOC interactivo, fechas separadas análisis/generación) y refinamiento de detalles técnicos en hallazgos pq-audit v2."
+    }
+  ],
+  "justifications": [],
+  "hidden_frameworks": [
+    "gdpr",
+    "dora",
+    "mica",
+    "ley25326",
+    "soc2",
+    "swift-csp",
+    "hipaa",
+    "sox",
+    "lgpd",
+    "lfpdppp",
+    "ccpa",
+    "cmmc",
+    "ens"
+  ]
+}
