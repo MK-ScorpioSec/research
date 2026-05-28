@@ -105,7 +105,7 @@ trufflehog filesystem ./terragoat --only-verified --json
 
 ## 5. Gap Analysis — GAP-001
 
-### The core finding: 169 undocumented misconfigs
+### The core finding: 173 undocumented misconfigs
 
 Bridgecrew documents **56 findings** for TerraGoat's AWS module via Checkov. Running Trivy against the same codebase produces **243 findings** — **187 not covered by the official documentation**.
 
