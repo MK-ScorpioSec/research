@@ -1,0 +1,4 @@
+# TerraGoat evidence files contain intentionally vulnerable code (mock credentials)
+# These are expected findings documented as part of the IaC security gap analysis research.
+# The AWS key AKIAIOSFODNN7EXAMAAA is AWS's official example/documentation key pattern.
+AVD-SECRET-0001
