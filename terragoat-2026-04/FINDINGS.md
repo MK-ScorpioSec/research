@@ -105,18 +105,19 @@ trufflehog filesystem ./terragoat --only-verified --json
 
 ## 5. Gap Analysis — GAP-001
 
-### The core finding: 173 undocumented misconfigs
+### The core finding: 187 undocumented misconfigs (Trivy) + 2 additional crypto findings (pq-audit)
 
-Bridgecrew documents **56 findings** for TerraGoat's AWS module via Checkov. Running Trivy against the same codebase produces **243 findings** — **187 not covered by the official documentation**.
+Bridgecrew documents **56 findings** for TerraGoat via Checkov. Running Trivy against the same codebase produces **243 findings** — **187 not covered by the official documentation** (243 − 56 = 187).
 
-When cross-referenced with pq-audit's crypto-specific layer, an additional **3 findings** emerge that no other scanner surfaces:
+pq-audit adds a cryptographic layer that no conventional IaC scanner covers, surfacing **2 additional findings** (BROKEN_NOW + SNDL_VULNERABLE) that neither Trivy nor Checkov detect.
 
 | Scanner | Findings | Documented by Bridgecrew |
 |---|---|---|
 | Checkov (official) | 56 | ✅ Yes |
-| Trivy | 243 | ❌ 187 undocumented |
+| Trivy | 243 | ❌ **187 undocumented** |
 | pq-audit v2 | 2 | ❌ 0 documented |
-| **Net gap** | **173** | **undocumented** |
+
+**Total undocumented across all scanners: 187 (Trivy) + 2 (pq-audit) = 189**
 
 > If your team chose Checkov because it's "official," you're seeing ~23% of your actual exposure — not because Checkov is bad, but because the documentation doesn't tell you what it *doesn't* cover.
 

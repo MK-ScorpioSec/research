@@ -2,7 +2,7 @@
 ## MK ScorpioSec Research Series #1
 
 > **TL;DR**: Bridgecrew's official documentation covers 56 TerraGoat findings (all via Checkov).
-> Running Trivy + pq-audit against the same code reveals **243 findings — 173 undocumented**.
+> Running Trivy + pq-audit against the same code reveals **243 findings — 187 undocumented**.
 > You're seeing 23% of your exposure if you trust the official documentation alone.
 
 ---
@@ -23,7 +23,7 @@ This study applies a multi-scanner pipeline against TerraGoat and maps the **gap
 | Trivy (Aqua Security) | 243 | ❌ 187 undocumented |
 | pq-audit v2 (crypto lens) | 2 | ❌ 0 documented |
 
-**173 findings are not covered in the official TerraGoat documentation.**
+**187 findings are not covered in the official TerraGoat documentation.**
 
 The most critical undocumented finding: Azure `app_service.tf:29` — TLS minimum set to 1.0/1.1. This is **BROKEN_NOW** (broken by classical standards today, not just post-quantum).
 
