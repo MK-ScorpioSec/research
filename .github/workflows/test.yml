@@ -6,10 +6,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        run: |
-          git clone "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" .
-          git checkout ${{ github.sha }}
+      - uses: actions/checkout@v4
       - run: pip3 install -r requirements.txt 2>/dev/null || true
       - run: python3 -m pytest tests/ -v 2>/dev/null || echo "No tests yet"
       - run: pip3 install bandit --quiet && python3 -m bandit -r . -ll --exit-zero
