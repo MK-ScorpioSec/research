@@ -31,7 +31,7 @@ Tools developed or maintained by MK ScorpioSec and used in this research:
 
 | Tool | Description | License |
 |------|-------------|---------|
-| [pq-audit](https://github.com/MK-ScorpioSec/pq-audit) | Post-quantum cryptography audit framework — 9-layer scan (code, cloud, IaC, certs, network, containers) with BROKEN_NOW / SNDL_VULNERABLE classification | Apache 2.0 |
+| [pq-audit](https://github.com/MK-ScorpioSec/pq-audit) | Post-quantum cryptography audit framework — 10-layer scan (code, cloud, deps, config, certs, network, containers, api, compliance, web3) with BROKEN_NOW / SNDL_VULNERABLE classification | Apache 2.0 |
 
 Third-party tools used across studies:
 
