@@ -1,5 +1,10 @@
 # research
 
+<p align="center">
+<img src="assets/banner.png" alt="research — IaC Security Research. TerraGoat gap analysis: 187 undocumented findings. Banner generated with AI assistance." width="100%" />
+<br><sub>Banner generated with AI assistance · MK ScorpioSec</sub>
+</p>
+
 > IaC security research — applied findings from real-world infrastructure analysis.
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-D62828?style=flat-square)](LICENSE)

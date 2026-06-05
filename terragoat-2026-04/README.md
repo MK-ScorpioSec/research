@@ -1,6 +1,11 @@
 # TerraGoat IaC Security Gap Analysis
 ## MK ScorpioSec Research Series #1
 
+<p align="center">
+<img src="assets/banner.png" alt="MK ScorpioSec Research — TerraGoat IaC Security Gap Analysis. 187 undocumented findings. Banner generated with AI assistance." width="100%" />
+<br><sub>Banner generated with AI assistance · MK ScorpioSec</sub>
+</p>
+
 > **TL;DR**: Bridgecrew's official documentation covers 56 TerraGoat findings (all via Checkov).
 > Running Trivy + pq-audit against the same code reveals **243 findings — 187 undocumented**.
 > You're seeing 23% of your exposure if you trust the official documentation alone.
