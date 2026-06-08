@@ -1,41 +1,79 @@
 name: Security Scan
+
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 2 * * 1'
 
 jobs:
-  security:
+  secrets:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: TruffleHog — secret scan
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+          | sh -s -- -b /usr/local/bin
+        trufflehog git file://. --since-commit HEAD~1 --only-verified --fail || true
+
+  bandit:
+    name: Bandit SAST
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Bandit — Python security
+      run: |
+        pip install bandit --quiet
+        if find . -name "*.py" | grep -q .; then
+          bandit -r . -ll -f json | tee bandit-results.json
+          python3 -c "
+import json, sys
+try:
+  d = json.load(open('bandit-results.json'))
+  highs = [r for r in d.get('results',[]) if r['issue_severity'] in ['HIGH','CRITICAL']]
+  if highs:
+    print(f'FAIL: {len(highs)} HIGH/CRITICAL findings')
+    sys.exit(1)
+  print('PASS')
+except: print('PASS')
+"
+        else
+          echo 'No Python files to scan'
+        fi
+
+  checkov:
+    name: Checkov IaC
     runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v4
 
-      - name: TruffleHog — secret scan
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
-            | sh -s -- -b /usr/local/bin
-          trufflehog git file://. --since-commit HEAD~1 --only-verified --fail || true
+    - name: Run Checkov
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: .
+        framework: terraform,cloudformation
+        output_format: sarif
+        output_file_path: checkov-results.sarif
+        soft_fail: true
 
-      - name: Bandit — Python security
-        run: |
-          pip install bandit --quiet
-          if find . -name "*.py" | grep -q .; then
-            bandit -r . -ll -f json | tee bandit-results.json
-            python3 -c "
-          import json, sys
-          try:
-            d = json.load(open('bandit-results.json'))
-            highs = [r for r in d.get('results',[]) if r['issue_severity'] in ['HIGH','CRITICAL']]
-            if highs:
-              print(f'FAIL: {len(highs)} HIGH/CRITICAL findings')
-              sys.exit(1)
-            print('PASS')
-          except: print('PASS')
-          "
-          else
-            echo 'No Python files to scan'
-          fi
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: checkov-results.sarif
