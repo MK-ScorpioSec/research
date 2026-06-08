@@ -1,8 +1,23 @@
 version: 2
 updates:
+  - package-ecosystem: "terraform"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "security"
+    commit-message:
+      prefix: "deps(terraform)"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    labels:
+      - "github-actions"
+      - "dependencies"
     commit-message:
       prefix: "chore"
