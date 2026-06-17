@@ -9,9 +9,11 @@
 ## Research Standards
 
 All contributions must meet the same bar as published studies:
-- Findings reproducible from publicly available tools (Trivy, Checkov, pq-audit, TruffleHog)
+
+- Findings reproducible from publicly available tools (Trivy, Checkov, pq-audit, TruffleHog, Falco)
 - Evidence provided as raw tool output (JSON preferred)
 - No client or proprietary data — lab/intentionally-vulnerable repos only
+- AI agent studies: behavioral analysis must use runtime monitoring (Falco or equivalent) — static analysis alone is not sufficient
 
 ## Commit Signing
 
