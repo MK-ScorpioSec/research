@@ -2,3 +2,8 @@
 # These are expected findings documented as part of the IaC security gap analysis research.
 # The AWS key AKIAIOSFODNN7EXAMAAA is AWS's official example/documentation key pattern.
 AVD-SECRET-0001
+
+# PentAGI case study HTML reports contain security research content that describes
+# detected attack patterns (EXFILTRATION, PROMPT_INJECTION, env var probing) as evidence.
+# These are documented findings, not active payloads. Approved FP — see SECURITY_AUDIT_LOG.md 2026-06-17.
+AVD-SECRET-0002

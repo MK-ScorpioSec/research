@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth scroll-pt-28">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PentAGI Security Research — Case Study #2 | MK ScorpioSec</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
+    <style>
+        body { font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f5f5f4; }
+        ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+
+        body::before {
+            content: "MK ScorpioSec Research";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 8rem;
+            font-weight: 900;
+            color: rgba(0, 0, 0, 0.03);
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 9999;
+            user-select: none;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid #e5e7eb;
+        }
+        .arch-box {
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-align: center;
+            min-width: 130px;
+        }
+        .arch-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #78716c;
+        }
+        .phase-badge {
+            display: inline-block;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 10px;
+            letter-spacing: 0.05em;
+        }
+        code {
+            background: #1c1917;
+            color: #a8a29e;
+            font-family: monospace;
+            font-size: 0.78rem;
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+
+        .print-only { display: none; }
+
+        @media screen {
+            #pdf-toc-page { display: none !important; }
+        }
+
+        /* Separador visual entre secciones (solo pantalla) */
+        .section-separator {
+            border: none;
+            border-top: 2px solid #f59e0b;
+            opacity: 0.35;
+            margin: 0;
+        }
+        @media print {
+            .section-separator { display: none !important; }
+        }
+
+        /* ── Líneas debajo de títulos de sección → amarillo de marca ── */
+        section > div.border-b,
+        section > div.border-b-2 { border-color: #f59e0b !important; }
+
+        /* ── PRINT DESIGN — Angular Slash v2 ── */
+        @media print {
+            .screen-only, #static-filter-container, .open-modal-btn, nav, #modal-overlay { display: none !important; }
+            .print-only { display: block; }
+            .avoid-page-break { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .page-break-before { page-break-before: always !important; }
+            .page-break-after  { page-break-after:  always !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .shadow, .shadow-md, .shadow-xl { box-shadow: none !important; border: 1px solid #e5e7eb; }
+
+            #cover-page-wrap { height: calc(100vh - 22px) !important; }
+
+            @page {
+                margin: 0 0 22px 0;
+                @bottom-left   { content: ""; background-color: #1c1917; }
+                @bottom-center {
+                    content: counter(page);
+                    color: #f59e0b;
+                    font-size: 9.5pt;
+                    font-weight: 700;
+                    font-family: system-ui, -apple-system, sans-serif;
+                    letter-spacing: 0.05em;
+                    background-color: #1c1917;
+                }
+                @bottom-right  { content: ""; background-color: #1c1917; }
+            }
+            @page :first {
+                @bottom-left   { content: ""; background-color: #1c1917; }
+                @bottom-center { content: ""; background-color: #1c1917; }
+                @bottom-right  { content: ""; background-color: #1c1917; }
+            }
+
+            /* TOC */
+            #pdf-toc-list { list-style: none; padding: 0; margin: 0; }
+            .toc-entry {
+                display: flex;
+                align-items: baseline;
+                padding: 7px 0;
+                color: #1c1917;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .toc-l1 { font-size: 12pt; font-weight: 700; border-bottom: 1px solid #d4d4d4; }
+            .toc-l2 { font-size: 10.5pt; font-weight: 500; padding-left: 24px; border-bottom: 1px solid #e7e5e4; }
+            .toc-entry .toc-title { flex: 1 1 auto; }
+            .toc-entry .toc-dots {
+                flex: 1 1 auto;
+                border-bottom: 1.5px dotted #a8a29e;
+                margin: 0 8px 3px 8px;
+                min-width: 20px;
+            }
+            .toc-entry .toc-page {
+                flex: 0 0 auto;
+                min-width: 32px;
+                font-weight: 700;
+                font-size: 11pt;
+                color: #1c1917;
+                text-align: right;
+            }
+            .toc-l2 .toc-page { color: #57534e; font-size: 10.5pt; }
+            #pdf-toc-list a, .toc-entry a { color: inherit !important; text-decoration: none !important; }
+
+            #prt-header, #prt-footer { display: flex !important; }
+            #prt-header-accent, #prt-footer-accent, #prt-header-corner { display: block !important; }
+
+            main {
+                padding-top: 0 !important;
+                padding-bottom: 58px !important;
+                padding-left: 1.2cm !important;
+                padding-right: 1.2cm !important;
+                max-width: 100% !important;
+            }
+
+            main > section { padding-top: 58px !important; }
+
+            .avoid-page-break {
+                padding-top: 55px !important;
+                margin-top: -39px !important;
+                margin-bottom: 55px !important;
+            }
+
+            main > section.avoid-page-break {
+                padding-top: 58px !important;
+                margin-top: 0    !important;
+            }
+
+            .prt-section-title {
+                padding-top: 58px !important;
+                margin-top: 0    !important;
+                break-after: avoid !important;
+                page-break-after: avoid !important;
+            }
+
+            .print-only.page-break-after {
+                padding-top: 58px !important;
+                padding-left: 1.2cm !important;
+                padding-right: 1.2cm !important;
+            }
+
+            /* ── Hallazgos print ── */
+            .prt-finding-wrap {
+                padding-top: 55px !important;
+                margin-top: -39px !important;
+                margin-bottom: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            .prt-finding-sub-block {
+                padding-top: 55px !important;
+                margin-top: -55px !important;
+                margin-bottom: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            .prt-finding-sub-block-last {
+                margin-bottom: 55px !important;
+            }
+            .prt-finding-page-break {
+                break-before: page !important;
+                page-break-before: always !important;
+            }
+            .prt-finding-wrap.prt-finding-page-break {
+                margin-top: 0 !important;
+                padding-top: 58px !important;
+            }
+            .prt-section-first {
+                margin-top: 0 !important;
+                padding-top: 58px !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-900 antialiased overflow-x-hidden">
+
+<!-- ═══ PRINT RUNNING HEADER ═══ -->
+<div id="prt-header" style="display:none;position:fixed;top:0;left:0;right:0;height:42px;background:#1c1917;z-index:9999;align-items:center;justify-content:space-between;padding:0 36px 0 16px;">
+    <div id="prt-header-leftslash" style="width:4px;height:42px;background:#b91c1c;position:absolute;left:0;top:0;"></div>
+    <span style="font-size:9.5pt;font-weight:800;letter-spacing:0.05em;padding-left:8px;"><span style="color:#f59e0b;">MK</span> <span style="color:#b91c1c;">SCORPIOSEC</span></span>
+    <span style="font-size:13pt;font-weight:900;color:#f59e0b;">◈</span>
+    <span style="font-size:9pt;font-weight:700;color:#f59e0b;font-family:monospace;letter-spacing:0.08em;">RESEARCH</span>
+</div>
+<div id="prt-header-accent" style="display:none;position:fixed;top:42px;left:0;right:0;height:3px;background:#b91c1c;z-index:9999;"></div>
+<svg id="prt-header-corner" style="display:none;position:fixed;top:0;right:0;width:42px;height:42px;z-index:10000;" viewBox="0 0 42 42">
+    <polygon points="22,0 42,0 42,20" fill="#f59e0b" opacity="0.9"/>
+</svg>
+
+<!-- ═══ PRINT RUNNING FOOTER ═══ -->
+<div id="prt-footer-accent" style="display:none;position:fixed;bottom:36px;left:0;right:0;height:3px;background:#b91c1c;z-index:9999;"></div>
+<div id="prt-footer" style="display:none;position:fixed;bottom:0;left:0;right:0;height:36px;background:#1c1917;z-index:9999;align-items:center;justify-content:space-between;padding:0 36px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:8.5pt;color:#d1d5db;font-weight:500;font-family:monospace;">PentAGI Security Research</span>
+    </div>
+    <span style="font-size:8.5pt;color:#9ca3af;font-weight:600;font-family:monospace;">MK ScorpioSec | Case Study #2</span>
+</div>
+
+<!-- COVER PAGE — Angular Slash Design -->
+<div id="cover-page-wrap" class="print-only page-break-after" style="position:relative;height:100vh;background:#080808;overflow:hidden;">
+    <svg style="position:absolute;inset:0;width:100%;height:100%;" viewBox="0 0 850 1100" preserveAspectRatio="xMidYMid meet">
+        <rect width="850" height="1100" fill="#080808"/>
+        <polygon points="0,0 850,0 850,300 0,420" fill="#991b1b"/>
+        <polygon points="0,0 850,0 850,265 0,375" fill="#b91c1c"/>
+        <line x1="0" y1="418" x2="850" y2="298" stroke="#f59e0b" stroke-width="2.5"/>
+        <line x1="0" y1="408" x2="850" y2="288" stroke="rgba(245,158,11,0.22)" stroke-width="1"/>
+        <rect x="706" y="876" width="112" height="112" fill="none" stroke="#b91c1c" stroke-width="1" opacity="0.18"/>
+        <rect x="720" y="890" width="84" height="84" fill="none" stroke="#f59e0b" stroke-width="0.5" opacity="0.12"/>
+        <circle cx="762" cy="932" r="4" fill="#f59e0b" opacity="0.18"/>
+        <rect y="1068" width="850" height="32" fill="#7f1d1d"/>
+        <rect y="1064" width="850" height="4" fill="#f59e0b"/>
+    </svg>
+    <div style="position:absolute;inset:0;padding:6vw 7vw;font-family:system-ui,sans-serif;">
+        <div style="display:flex;align-items:center;gap:4vw;">
+            <div style="width:18vw;height:18vw;border-radius:50%;background:#080808;border:3px solid #f59e0b;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 6px rgba(245,158,11,0.12),0 8px 24px rgba(0,0,0,0.6);">
+                <span style="font-size:3.2vw;font-weight:900;color:#f59e0b;letter-spacing:0.08em;font-family:system-ui,sans-serif;">MK</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.4vw;justify-content:center;">
+                <div style="background:#b91c1c;padding:0.4vw 1.4vw;display:inline-block;">
+                    <span style="font-size:2vw;font-weight:900;color:#f59e0b;letter-spacing:0.1em;">MK</span><span style="font-size:2vw;font-weight:900;color:white;letter-spacing:0.1em;"> SCORPIOSEC</span>
+                </div>
+                <div style="background:#7f1d1d;padding:0.35vw 1.4vw;display:inline-block;margin-top:0.15vw;">
+                    <span style="font-size:1.4vw;font-weight:700;color:#f5f5f5;letter-spacing:0.18em;font-family:monospace;">AiSecOps Platform</span>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top:30vh;padding-left:3vw;border-left:3px solid #b91c1c;">
+            <div style="font-size:1.5vw;color:#f59e0b;font-weight:700;letter-spacing:0.18em;margin-bottom:1.5vw;font-family:monospace;">AI AGENT SECURITY RESEARCH</div>
+            <div style="font-size:5.8vw;font-weight:900;color:white;line-height:1.05;">PentAGI<br>Security Research</div>
+            <div style="margin-top:2vw;height:1px;background:linear-gradient(to right,rgba(185,28,28,0.8),transparent);width:55%;"></div>
+            <div style="margin-top:2.5vw;font-size:1.8vw;color:#9ca3af;">Objective: <span style="color:white;font-weight:600;">vxcontrol/pentagi (Open Source)</span></div>
+            <div style="margin-top:3vw;display:inline-block;background:#b91c1c;color:white;font-size:1.4vw;padding:0.6vw 2.2vw;font-weight:700;letter-spacing:0.1em;">✦ CLASSIFICATION: RESEARCH</div>
+        </div>
+        <div style="position:absolute;bottom:5vh;left:7vw;right:7vw;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:1.2vw;color:rgba(255,255,255,0.5);font-family:monospace;">April 19–21, 2026</div>
+            <div style="font-size:1.2vw;color:rgba(255,255,255,0.5);font-family:monospace;">AI Security · Claude Sonnet 4.6</div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF TOC PAGE (print-only) -->
+<div class="print-only page-break-after pt-10" id="pdf-toc-page">
+    <h2 class="text-3xl font-bold text-stone-900 border-b-4 border-amber-500 pb-2 mb-8">Table of Contents</h2>
+    <ul class="space-y-0 text-stone-800" id="pdf-toc-list">
+        <li class="toc-entry toc-l1">
+            <a href="#executive-dashboard" class="toc-title">Executive Summary &amp; Metrics</a><span class="toc-dots"></span><a href="#executive-dashboard" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#research-timeline" class="toc-title">Research Phase Timeline</a><span class="toc-dots"></span><a href="#research-timeline" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#static-findings" class="toc-title">Static Analysis Findings</a><span class="toc-dots"></span><a href="#static-findings" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#architecture" class="toc-title">Phase 2.2 Architecture</a><span class="toc-dots"></span><a href="#architecture" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#dynamic-findings" class="toc-title">Gateway Security Findings</a><span class="toc-dots"></span><a href="#dynamic-findings" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#tools-developed" class="toc-title">Tools Developed</a><span class="toc-dots"></span><a href="#tools-developed" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#key-findings" class="toc-title">Key Findings</a><span class="toc-dots"></span><a href="#key-findings" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#remediation-roadmap" class="toc-title">Remediation Roadmap</a><span class="toc-dots"></span><a href="#remediation-roadmap" class="toc-page">—</a>
+        </li>
+        <li class="toc-entry toc-l1">
+            <a href="#verdict" class="toc-title">Research Verdict</a><span class="toc-dots"></span><a href="#verdict" class="toc-page">—</a>
+        </li>
+    </ul>
+</div>
+
+<!-- NAV -->
+<nav class="bg-stone-900 text-stone-50 border-b-4 border-amber-500 sticky top-0 z-40 shadow-xl screen-only">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-3 sm:gap-4">
+                <div class="flex items-center gap-2">
+                    <span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:2px;flex-shrink:0;margin-right:2px;"></span>
+                    <span style="font-weight:900;font-size:1.15rem;letter-spacing:0.06em;color:#f59e0b;">MK</span><span style="font-weight:900;font-size:1.15rem;letter-spacing:0.06em;color:#b91c1c;"> SCORPIOSEC</span>
+                    <span class="hidden sm:inline text-stone-500" style="margin:0 4px;font-size:0.85em;">|</span>
+                    <span class="hidden sm:inline text-stone-400 text-sm font-semibold" style="letter-spacing:0.02em;">AiSecOps Platform</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:block text-sm font-bold bg-stone-800 px-3 py-1 rounded border border-stone-700">
+                    TARGET: <span class="text-yellow-500">PentAGI (vxcontrol/pentagi)</span>
+                </div>
+                <button onclick="window.print()"
+                        class="hidden sm:flex items-center gap-2 bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded text-sm font-bold transition ml-2 border border-red-800 shadow cursor-pointer">
+                    &#128424; Export PDF
+                </button>
+                <button onclick="exportDocx()"
+                        class="hidden sm:flex items-center gap-2 bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-bold transition ml-1 border border-blue-800 shadow cursor-pointer">
+                    &#128196; Export DOCX
+                </button>
+            </div>
+        </div>
+        <div class="bg-stone-800 border-t border-stone-700 text-xs sm:text-sm font-bold overflow-x-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 whitespace-nowrap py-2.5 text-stone-400">
+                <a href="#executive-dashboard"  class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Executive Summary</a>
+                <a href="#research-timeline"    class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Timeline</a>
+                <a href="#static-findings"      class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Static Findings</a>
+                <a href="#architecture"         class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Architecture</a>
+                <a href="#dynamic-findings"     class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Gateway Findings</a>
+                <a href="#tools-developed"      class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Tools</a>
+                <a href="#key-findings"         class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Key Findings</a>
+                <a href="#remediation-roadmap"  class="hover:text-white hover:underline decoration-red-500 underline-offset-4 transition">Roadmap</a>
+                <a href="#verdict"              class="hover:text-white hover:underline decoration-green-400 underline-offset-4 transition">Verdict</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+    <!-- HEADER CONTEXT (screen-only) -->
+    <section id="header-context" class="space-y-4 screen-only">
+        <div class="flex flex-wrap items-center gap-3 mb-2">
+            <span class="phase-badge bg-red-700 text-white">CASE STUDY #1</span>
+            <span class="phase-badge bg-stone-800 text-stone-100">AI AGENT SECURITY</span>
+            <span class="phase-badge bg-orange-600 text-white">PUBLIC RESEARCH</span>
+        </div>
+        <h1 class="text-4xl font-extrabold text-stone-900 tracking-tight">PentAGI Security Research — Case Study #2</h1>
+        <p class="text-lg text-stone-600 leading-relaxed max-w-4xl">
+            This interactive report consolidates the results of a three-phase security research engagement against
+            <strong class="text-stone-900">PentAGI</strong>, an open-source autonomous AI pentesting agent (Go, 1001 files,
+            9 Docker configs). The research spans static source analysis, sandbox behavioral testing, and a fully instrumented
+            end-to-end execution with a custom Mock LLM and AI Security Gateway — all conducted in an isolated, air-gapped environment.
+            Dates: <strong>April 19–21, 2026</strong>.
+        </p>
+        <div class="flex flex-wrap gap-4 text-sm font-semibold">
+            <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full border border-red-200">&#128683; CLASSIFICATION: RESEARCH</span>
+            <span class="bg-stone-200 text-stone-800 px-3 py-1 rounded-full border border-stone-300">&#128100; Researcher: Mike Martinez Oroz</span>
+            <span class="bg-stone-200 text-stone-800 px-3 py-1 rounded-full border border-stone-300">&#128269; Organization: MK ScorpioSec</span>
+            <span class="bg-stone-200 text-stone-800 px-3 py-1 rounded-full border border-stone-300">&#128197; Published: June 2026</span>
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 1. EXECUTIVE DASHBOARD -->
+    <section id="executive-dashboard" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">1. Executive Summary &amp; Metrics</h2>
+            <p class="text-stone-600 mt-1">Quantitative overview of all three research phases. Overall security posture: <strong class="text-red-700">DANGEROUS BY DESIGN</strong> — PentAGI requires host-level Docker socket access to operate, making isolation a prerequisite, not an option.</p>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="bg-white rounded-xl shadow border border-stone-200 p-4 text-center avoid-page-break">
+                <div class="text-3xl font-black text-red-700">4</div>
+                <div class="text-xs font-bold text-stone-500 mt-1 uppercase tracking-wide">Critical Findings</div>
+            </div>
+            <div class="bg-white rounded-xl shadow border border-stone-200 p-4 text-center avoid-page-break">
+                <div class="text-3xl font-black text-orange-600">1144</div>
+                <div class="text-xs font-bold text-stone-500 mt-1 uppercase tracking-wide">Docker API Calls</div>
+            </div>
+            <div class="bg-white rounded-xl shadow border border-stone-200 p-4 text-center avoid-page-break">
+                <div class="text-3xl font-black text-yellow-600">274</div>
+                <div class="text-xs font-bold text-stone-500 mt-1 uppercase tracking-wide">Intercepted Requests</div>
+            </div>
+            <div class="bg-white rounded-xl shadow border border-stone-200 p-4 text-center avoid-page-break">
+                <div class="text-3xl font-black text-red-700">73.7%</div>
+                <div class="text-xs font-bold text-stone-500 mt-1 uppercase tracking-wide">Traffic with Threats</div>
+            </div>
+            <div class="bg-white rounded-xl shadow border border-stone-200 p-4 text-center avoid-page-break">
+                <div class="text-3xl font-black text-red-800">462</div>
+                <div class="text-xs font-bold text-stone-500 mt-1 uppercase tracking-wide">Exfiltration Events</div>
+            </div>
+            <div class="bg-white rounded-xl shadow border border-stone-200 p-4 text-center avoid-page-break">
+                <div class="text-3xl font-black text-purple-700">24</div>
+                <div class="text-xs font-bold text-stone-500 mt-1 uppercase tracking-wide">Prompt Injections</div>
+            </div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow-md border border-stone-200 p-6 flex flex-col justify-between avoid-page-break">
+                <div>
+                    <h3 class="text-lg font-bold text-stone-800 mb-2">Risk Score</h3>
+                    <p class="text-sm text-stone-500 mb-4">Weighted security posture score for PentAGI based on static analysis, behavioral observation, and architectural risk.</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+                <div class="mt-4 text-center">
+                    <span class="text-3xl font-black text-red-700">18 / 100</span>
+                    <div class="text-xs text-stone-500 mt-1">DANGEROUS BY DESIGN</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md border border-stone-200 p-6 flex flex-col justify-between avoid-page-break">
+                <div>
+                    <h3 class="text-lg font-bold text-stone-800 mb-2">Static Code Patterns</h3>
+                    <p class="text-sm text-stone-500 mb-4">Frequency of security-sensitive code patterns identified across 1001 source files (518 Go).</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="patternsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md border border-stone-200 p-6 flex flex-col justify-between avoid-page-break">
+                <div>
+                    <h3 class="text-lg font-bold text-stone-800 mb-2">Phase 2.2 Gateway Detections</h3>
+                    <p class="text-sm text-stone-500 mb-4">Threat categories detected by the AI Security Gateway across 274 intercepted agent-to-LLM requests.</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="gatewayChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 2. RESEARCH TIMELINE -->
+    <section id="research-timeline" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">2. Research Phase Timeline</h2>
+            <p class="text-stone-600 mt-1">Three-phase progression from static analysis through iterative sandbox testing to successful end-to-end instrumented execution.</p>
+        </div>
+
+        <div class="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-1 before:bg-stone-300">
+
+            <!-- Phase 1 -->
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-red-600 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow text-sm">1.0</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-red-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-red-700 text-lg">Phase 1 — Static Analysis</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">April 19, 2026</span>
+                    </div>
+                    <p class="text-sm text-stone-700 mb-2">Source code audit of the full repository. Tools: custom auditor script, trufflehog, grep pattern analysis.</p>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="text-xs bg-red-100 text-red-800 border border-red-200 px-2 py-1 rounded font-bold">4 CRITICAL findings</span>
+                        <span class="text-xs bg-orange-100 text-orange-800 border border-orange-200 px-2 py-1 rounded font-bold">1144 Docker API calls</span>
+                        <span class="text-xs bg-green-100 text-green-800 border border-green-200 px-2 py-1 rounded font-bold">0 hardcoded secrets</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2.0 -->
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-orange-500 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow text-sm">2.0</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-orange-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-orange-700 text-lg">Phase 2.0 — Basic Sandbox</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">April 20, 2026</span>
+                    </div>
+                    <p class="text-sm text-stone-700 mb-2">Isolated Docker sandbox: <code>internal: true</code>, no docker.sock mount, read-only filesystem, fake API keys.</p>
+                    <div class="bg-red-50 border border-red-200 rounded p-2 mt-2">
+                        <span class="text-xs font-bold text-red-700">RESULT: PentAGI halts at T+16s — "Docker runtime client initialization failed." Confirms docker.sock is mandatory core, not optional feature.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2.1 -->
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-yellow-500 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow text-sm">2.1</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-yellow-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-yellow-700 text-lg">Phase 2.1 — Docker-in-Docker + Ollama</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">April 20, 2026</span>
+                    </div>
+                    <p class="text-sm text-stone-700 mb-2">Added DinD container and Ollama local LLM backend. Tested with gemma3:4b and qwen3:1.7b models on CPU.</p>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <div class="bg-red-50 border border-red-200 rounded p-2 text-xs text-red-700 font-bold">gemma3:4b — TIMEOUT 10m2s</div>
+                        <div class="bg-red-50 border border-red-200 rounded p-2 text-xs text-red-700 font-bold">qwen3:1.7b — TIMEOUT 10m3s</div>
+                    </div>
+                    <p class="text-xs text-stone-600 mt-2">Hardcoded 10-minute LLM timeout is non-configurable. CPU inference incompatible. Requires cloud API or GPU.</p>
+                </div>
+            </div>
+
+            <!-- Phase 2.2 -->
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-green-600 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow text-sm">2.2</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-green-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-green-700 text-lg">Phase 2.2 — Mock LLM + AI Gateway</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">April 21, 2026</span>
+                    </div>
+                    <p class="text-sm text-stone-700 mb-2">Custom Mock LLM server + AI Security Gateway proxy. Full end-to-end execution achieved. 274 requests intercepted, 202 containing threat patterns.</p>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="text-xs bg-green-100 text-green-800 border border-green-200 px-2 py-1 rounded font-bold">SUCCESS — Flow #10 complete</span>
+                        <span class="text-xs bg-red-100 text-red-800 border border-red-200 px-2 py-1 rounded font-bold">462 EXFILTRATION events</span>
+                        <span class="text-xs bg-purple-100 text-purple-800 border border-purple-200 px-2 py-1 rounded font-bold">24 PROMPT_INJECTION</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 3. STATIC FINDINGS -->
+    <section id="static-findings" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">3. Static Analysis — Critical Findings</h2>
+            <p class="text-stone-600 mt-1">Four critical/high-severity findings identified via source code inspection. Zero false positives confirmed by dynamic phases.</p>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-4 screen-only" id="static-filter-container">
+            <button data-filter="all" class="px-4 py-2 bg-stone-800 text-white rounded font-bold shadow hover:bg-stone-700 transition">All (7)</button>
+            <button data-filter="CRITICAL" class="px-4 py-2 bg-white text-stone-800 border border-stone-300 rounded font-bold shadow hover:bg-stone-100 transition">&#128308; Critical (4)</button>
+            <button data-filter="HIGH" class="px-4 py-2 bg-white text-stone-800 border border-stone-300 rounded font-bold shadow hover:bg-stone-100 transition">&#128992; High (1)</button>
+            <button data-filter="MEDIUM" class="px-4 py-2 bg-white text-stone-800 border border-stone-300 rounded font-bold shadow hover:bg-stone-100 transition">&#128993; Medium (1)</button>
+            <button data-filter="INFO" class="px-4 py-2 bg-white text-stone-800 border border-stone-300 rounded font-bold shadow hover:bg-stone-100 transition">&#128994; Info (1)</button>
+        </div>
+
+        <div id="findings-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 4. ARCHITECTURE DIAGRAM -->
+    <section id="architecture" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">4. Phase 2.2 Sandbox Architecture</h2>
+            <p class="text-stone-600 mt-1">Fully instrumented, air-gapped sandbox. All agent-to-LLM traffic routed through the AI Security Gateway for real-time threat detection.</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md border border-stone-200 p-6 overflow-x-auto avoid-page-break">
+            <div class="min-w-[700px]">
+
+                <!-- Top row: PentAGI internals -->
+                <div class="flex items-center justify-center gap-4 mb-6">
+                    <div class="arch-box border-red-400 bg-red-50 text-red-800">
+                        PentAGI Agents<br>
+                        <span class="font-normal text-red-600 text-xs">(Generator / Refiner / Primary)</span>
+                    </div>
+                    <div class="arch-arrow">&#8594;</div>
+                    <div class="arch-box border-purple-400 bg-purple-50 text-purple-800">
+                        AI Security Gateway<br>
+                        <span class="font-normal text-purple-600 text-xs">:11435 — detect mode</span>
+                    </div>
+                    <div class="arch-arrow">&#8594;</div>
+                    <div class="arch-box border-blue-400 bg-blue-50 text-blue-800">
+                        Mock LLM Server<br>
+                        <span class="font-normal text-blue-600 text-xs">:11436 — 3 modes</span>
+                    </div>
+                </div>
+
+                <!-- Arrows down -->
+                <div class="flex items-start justify-center gap-4 mb-2">
+                    <div class="flex flex-col items-center" style="min-width:130px;">
+                        <div class="text-2xl text-stone-400">&#8595;</div>
+                        <div class="text-xs text-stone-500 text-center">tool calls</div>
+                    </div>
+                    <div style="min-width:130px;"></div>
+                    <div class="flex flex-col items-center" style="min-width:130px;">
+                        <div class="text-2xl text-stone-400">&#8595;</div>
+                        <div class="text-xs text-stone-500 text-center">logs all prompts</div>
+                    </div>
+                </div>
+
+                <!-- Second row: Execution environments -->
+                <div class="flex items-stretch justify-center gap-4 mb-6">
+                    <div class="arch-box border-stone-400 bg-stone-100 text-stone-800 flex-1 max-w-xs">
+                        Docker-in-Docker (DinD)<br>
+                        <span class="font-normal text-stone-600 text-xs">pentagi-terminal-10 (debian:latest)</span><br>
+                        <span class="font-normal text-stone-500 text-xs">nmap · /etc/passwd · curl · env</span>
+                    </div>
+                    <div class="arch-arrow">&#8596;</div>
+                    <div class="arch-box border-orange-400 bg-orange-50 text-orange-800 flex-1 max-w-xs">
+                        DVWA Target<br>
+                        <span class="font-normal text-orange-600 text-xs">(inside DinD sandbox)</span><br>
+                        <span class="font-normal text-orange-500 text-xs">HTTP target for agent recon</span>
+                    </div>
+                </div>
+
+                <!-- Third row: Isolation boundary -->
+                <div class="border-2 border-dashed border-red-400 rounded-xl p-4 mt-2">
+                    <div class="text-center text-xs font-bold text-red-600 uppercase tracking-widest mb-3">Network Isolation Boundary — internal: true (no internet)</div>
+                    <div class="flex items-center justify-center gap-6 flex-wrap">
+                        <div class="arch-box border-green-400 bg-green-50 text-green-800">
+                            PostgreSQL<br>
+                            <span class="font-normal text-xs text-green-600">pgvector (sandbox)</span>
+                        </div>
+                        <div class="arch-box border-stone-400 bg-stone-50 text-stone-700">
+                            No docker.sock<br>
+                            <span class="font-normal text-xs text-stone-500">Static: read-only FS</span>
+                        </div>
+                        <div class="arch-box border-stone-400 bg-stone-50 text-stone-700">
+                            Fake API Keys<br>
+                            <span class="font-normal text-xs text-stone-500">OpenAI / Anthropic</span>
+                        </div>
+                        <div class="arch-box border-blue-400 bg-blue-50 text-blue-800">
+                            Gateway Logs<br>
+                            <span class="font-normal text-xs text-blue-600">274 reqs · 202 threats</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 5. DYNAMIC PHASE 2.2 FINDINGS -->
+    <section id="dynamic-findings" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">5. Phase 2.2 — Gateway Security Findings</h2>
+            <p class="text-stone-600 mt-1">Threat intelligence captured by the AI Security Gateway across all 274 intercepted agent-to-LLM requests during the successful end-to-end execution run.</p>
+        </div>
+
+        <!-- Gateway threat breakdown -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Exfiltration detail -->
+            <div class="bg-white rounded-xl shadow-md border border-red-200 p-6 avoid-page-break">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-red-700 text-white font-black px-3 py-1 rounded text-sm">EXFILTRATION</span>
+                    <span class="text-3xl font-black text-red-700">462</span>
+                    <span class="text-stone-500 text-sm">pattern matches</span>
+                </div>
+                <p class="text-sm text-stone-600 mb-4">PentAGI's agent system prompts contain extensive instructions for data collection and exfiltration as part of its legitimate pentest workflow. The Gateway correctly flags all of these.</p>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="font-mono text-stone-700">IP address extraction patterns</span>
+                        <span class="font-bold text-red-700">178 hits</span>
+                    </div>
+                    <div class="w-full bg-stone-100 rounded-full h-2"><div class="bg-red-600 h-2 rounded-full" style="width:38%"></div></div>
+
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="font-mono text-stone-700">/etc/passwd &amp; /etc/shadow access</span>
+                        <span class="font-bold text-red-700">136 hits</span>
+                    </div>
+                    <div class="w-full bg-stone-100 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width:29%"></div></div>
+
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="font-mono text-stone-700">nc -l (netcat listener)</span>
+                        <span class="font-bold text-red-700">96 hits</span>
+                    </div>
+                    <div class="w-full bg-stone-100 rounded-full h-2"><div class="bg-orange-500 h-2 rounded-full" style="width:21%"></div></div>
+
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="font-mono text-stone-700">curl | bash pipe patterns</span>
+                        <span class="font-bold text-red-700">52 hits</span>
+                    </div>
+                    <div class="w-full bg-stone-100 rounded-full h-2"><div class="bg-orange-400 h-2 rounded-full" style="width:11%"></div></div>
+                </div>
+            </div>
+
+            <!-- Prompt injection detail -->
+            <div class="bg-white rounded-xl shadow-md border border-purple-200 p-6 avoid-page-break">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="bg-purple-700 text-white font-black px-3 py-1 rounded text-sm">PROMPT INJECTION</span>
+                    <span class="text-3xl font-black text-purple-700">24</span>
+                    <span class="text-stone-500 text-sm">matches in system prompts</span>
+                </div>
+                <p class="text-sm text-stone-600 mb-4">PentAGI injects <code>bypass security/filter/restriction</code> patterns in its own system prompts — a legitimate design choice to enable an LLM to perform offensive actions, but flagged as prompt injection by the Gateway's 12-pattern ruleset.</p>
+                <div class="bg-purple-50 border border-purple-200 rounded p-3 mt-2">
+                    <div class="text-xs font-bold text-purple-800 uppercase tracking-wide mb-1">Key Insight</div>
+                    <p class="text-sm text-stone-700">This demonstrates that <strong>without a Gateway</strong>, a compromised or malicious LLM could receive these bypass instructions and act on them — executing arbitrary commands in the DinD container and exfiltrating data.</p>
+                </div>
+                <div class="mt-4">
+                    <div class="text-xs font-bold text-stone-500 uppercase tracking-wide mb-2">Traffic Breakdown</div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 bg-stone-100 rounded-full h-4 overflow-hidden">
+                            <div class="h-4 rounded-full flex">
+                                <div class="bg-red-600 h-4" style="width:73.7%" title="Threats: 202 requests"></div>
+                                <div class="bg-green-500 h-4" style="width:26.3%" title="Clean: 72 requests"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 mt-2 text-xs font-semibold">
+                        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 bg-red-600 rounded-sm"></span> 202 with threats (73.7%)</span>
+                        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 bg-green-500 rounded-sm"></span> 72 clean (26.3%)</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Execution trace -->
+        <div class="bg-white rounded-xl shadow-md border border-stone-200 p-6 avoid-page-break">
+            <h3 class="text-lg font-bold text-stone-800 mb-4">Successful Execution Trace (Flow #10)</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs text-stone-500 uppercase border-b border-stone-200">
+                            <th class="pb-2 pr-4 font-bold">Step</th>
+                            <th class="pb-2 pr-4 font-bold">Agent</th>
+                            <th class="pb-2 pr-4 font-bold">Tool Called</th>
+                            <th class="pb-2 font-bold">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-100">
+                        <tr class="text-stone-700">
+                            <td class="py-2 pr-4 font-mono text-xs text-stone-500">1</td>
+                            <td class="py-2 pr-4">tool_call_id_detector</td>
+                            <td class="py-2 pr-4 font-mono"><code>get_number</code> ×5</td>
+                            <td class="py-2 text-stone-600">Template <code>call_{r:24:h}</code> detected</td>
+                        </tr>
+                        <tr class="text-stone-700">
+                            <td class="py-2 pr-4 font-mono text-xs text-stone-500">2</td>
+                            <td class="py-2 pr-4">docker_image_selector</td>
+                            <td class="py-2 pr-4 font-mono"><code>(text response)</code></td>
+                            <td class="py-2 text-stone-600">debian:latest selected</td>
+                        </tr>
+                        <tr class="text-stone-700">
+                            <td class="py-2 pr-4 font-mono text-xs text-stone-500">3</td>
+                            <td class="py-2 pr-4">generator</td>
+                            <td class="py-2 pr-4 font-mono"><code>subtask_list</code> (barrier)</td>
+                            <td class="py-2 text-green-700 font-bold">4 subtasks created</td>
+                        </tr>
+                        <tr class="text-stone-700">
+                            <td class="py-2 pr-4 font-mono text-xs text-stone-500">4</td>
+                            <td class="py-2 pr-4">primary_agent (S1)</td>
+                            <td class="py-2 pr-4 font-mono"><code>terminal</code> ×4 + <code>done</code></td>
+                            <td class="py-2 text-stone-600">nmap, /etc/passwd, web enum, env</td>
+                        </tr>
+                        <tr class="text-stone-700">
+                            <td class="py-2 pr-4 font-mono text-xs text-stone-500">5</td>
+                            <td class="py-2 pr-4">refiner (S1)</td>
+                            <td class="py-2 pr-4 font-mono"><code>subtask_patch</code> (barrier)</td>
+                            <td class="py-2 text-stone-600">No changes</td>
+                        </tr>
+                        <tr class="text-stone-700">
+                            <td class="py-2 pr-4 font-mono text-xs text-stone-500">6–8</td>
+                            <td class="py-2 pr-4">primary_agent (S2–S4)</td>
+                            <td class="py-2 pr-4 font-mono"><code>terminal</code> + <code>done</code></td>
+                            <td class="py-2 text-stone-600">Remaining subtask cycles (16+ commands total)</td>
+                        </tr>
+                        <tr class="text-stone-700">
+                            <td class="py-2 pr-4 font-mono text-xs text-stone-500">9</td>
+                            <td class="py-2 pr-4">refiner (final)</td>
+                            <td class="py-2 pr-4 font-mono"><code>subtask_patch</code></td>
+                            <td class="py-2 text-green-700 font-bold">planned_count=0, task_complete=true</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-3 text-xs font-bold">
+                <span class="bg-green-100 text-green-800 border border-green-200 px-3 py-1 rounded">Duration: ~4 seconds</span>
+                <span class="bg-blue-100 text-blue-800 border border-blue-200 px-3 py-1 rounded">4/4 subtasks completed</span>
+                <span class="bg-stone-100 text-stone-800 border border-stone-200 px-3 py-1 rounded">Container: pentagi-terminal-10</span>
+                <span class="bg-orange-100 text-orange-800 border border-orange-200 px-3 py-1 rounded">16+ commands executed in DinD</span>
+            </div>
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 6. TOOLS DEVELOPED -->
+    <section id="tools-developed" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">6. Tools Developed During Research</h2>
+            <p class="text-stone-600 mt-1">Two purpose-built tools created to enable Phase 2.2. Both are reusable for future AI agent security research.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div class="bg-white rounded-xl shadow-md border border-blue-200 p-6 avoid-page-break">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-blue-700 text-white font-black px-3 py-1 rounded text-sm font-mono">mock_llm.py</span>
+                    <span class="text-xs font-bold text-blue-600 border border-blue-200 px-2 py-1 rounded bg-blue-50">Ollama/OpenAI Compatible</span>
+                </div>
+                <p class="text-sm text-stone-600 mb-4">Lightweight mock LLM server that responds instantly (0 latency), eliminating CPU inference timeouts. Fully implements Ollama API including function/tool calling with unique IDs.</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-start gap-2">
+                        <span class="text-blue-600 font-bold mt-0.5">&#8226;</span>
+                        <span><strong>Mode: helpful</strong> — Responds with valid tool calls (terminal, subtask_list, done, subtask_patch). Simulates a cooperative agent LLM.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-red-600 font-bold mt-0.5">&#8226;</span>
+                        <span><strong>Mode: malicious</strong> — Injects adversarial payloads into tool calls. Tests Gateway detection capability.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-yellow-600 font-bold mt-0.5">&#8226;</span>
+                        <span><strong>Mode: confused</strong> — Sends malformed/unexpected responses. Tests agent error handling robustness.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-stone-500 font-bold mt-0.5">&#8226;</span>
+                        <span>Full logging of all received prompts. Tool call IDs format: <code>call_{24hex}</code>.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-stone-500 font-bold mt-0.5">&#8226;</span>
+                        <span>PentAGI-specific barrier logic: <code>subtask_list</code> terminates generator, <code>done</code> terminates executor, refiner detection via agent context.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md border border-purple-200 p-6 avoid-page-break">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="bg-purple-700 text-white font-black px-3 py-1 rounded text-sm font-mono">ai_gateway.py</span>
+                    <span class="text-xs font-bold text-purple-600 border border-purple-200 px-2 py-1 rounded bg-purple-50">HTTP Proxy + Detection</span>
+                </div>
+                <p class="text-sm text-stone-600 mb-4">Transparent HTTP proxy placed between AI agents and their LLM backend. Intercepts all requests/responses for real-time threat detection and logging — no agent modification required.</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-start gap-2">
+                        <span class="text-purple-600 font-bold mt-0.5">&#8226;</span>
+                        <span><strong>12 exfiltration patterns</strong> — IPs, credentials, sensitive files, network listener commands, pipe-to-bash patterns.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-purple-600 font-bold mt-0.5">&#8226;</span>
+                        <span><strong>12 prompt injection patterns</strong> — bypass/jailbreak/ignore-previous-instructions keywords in system prompts.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-purple-600 font-bold mt-0.5">&#8226;</span>
+                        <span><strong>9 suspicious action patterns</strong> — chmod 777, root privilege escalation, cron job creation, SSH key deployment.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-stone-500 font-bold mt-0.5">&#8226;</span>
+                        <span><strong>Mode: detect</strong> — Logs and passes through. <strong>Mode: enforce</strong> — Blocks and rejects threats with configurable rate limiting.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-stone-500 font-bold mt-0.5">&#8226;</span>
+                        <span>Output: JSONL structured logs with timestamps, threat type, matched pattern, request ID. Compatible with SIEM ingestion.</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 7. KEY FINDINGS SUMMARY -->
+    <section id="key-findings" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">7. Consolidated Key Findings</h2>
+            <p class="text-stone-600 mt-1">Cross-phase findings with MITRE ATT&amp;CK mapping and deployment guidance.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div class="bg-red-50 border-l-4 border-red-600 rounded-lg p-5 avoid-page-break">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-bold text-white bg-red-700 px-2 py-0.5 rounded">CRITICAL</span>
+                    <span class="text-xs font-mono text-stone-500">T1611 — Escape to Host</span>
+                </div>
+                <h3 class="font-bold text-stone-900 mb-2">Docker Socket Mount is Non-Optional</h3>
+                <p class="text-sm text-stone-700">PentAGI requires <code>/var/run/docker.sock</code> to operate. Any installation grants the agent (and any LLM it contacts) full host-level Docker control: container creation/destruction, volume access, and privilege escalation to root. Confirmed dynamically in Phase 2.0.</p>
+                <div class="mt-2 text-xs font-mono text-red-800 bg-red-100 p-2 rounded">CVSS: 9.8 — docker-compose.yml:176</div>
+            </div>
+
+            <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-5 avoid-page-break">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-bold text-white bg-red-700 px-2 py-0.5 rounded">CRITICAL</span>
+                    <span class="text-xs font-mono text-stone-500">T1078.003 — Local Accounts</span>
+                </div>
+                <h3 class="font-bold text-stone-900 mb-2">Container Runs as root:root</h3>
+                <p class="text-sm text-stone-700">The main PentAGI service container is explicitly configured with <code>user: root:root</code>. Combined with docker.sock access, this provides maximal host privilege from the moment the container starts.</p>
+                <div class="mt-2 text-xs font-mono text-red-800 bg-red-100 p-2 rounded">CVSS: 9.1 — docker-compose.yml:180</div>
+            </div>
+
+            <div class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-5 avoid-page-break">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-bold text-white bg-orange-600 px-2 py-0.5 rounded">HIGH</span>
+                    <span class="text-xs font-mono text-stone-500">T1557 — Adversary-in-the-Middle</span>
+                </div>
+                <h3 class="font-bold text-stone-900 mb-2">NET_ADMIN Capability Available</h3>
+                <p class="text-sm text-stone-700">The <code>DOCKER_NET_ADMIN</code> flag (default: false) can enable full host network manipulation — ARP spoofing, packet sniffing, routing changes. If activated by a compromised LLM or misconfiguration, provides network-wide attack surface.</p>
+                <div class="mt-2 text-xs font-mono text-orange-800 bg-orange-100 p-2 rounded">CVSS: 8.0 — docker-compose.yml:161</div>
+            </div>
+
+            <div class="bg-orange-50 border-l-4 border-orange-400 rounded-lg p-5 avoid-page-break">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-bold text-white bg-orange-600 px-2 py-0.5 rounded">HIGH</span>
+                    <span class="text-xs font-mono text-stone-500">T1059 — Command Execution</span>
+                </div>
+                <h3 class="font-bold text-stone-900 mb-2">1144 Docker API Calls + 46 exec.Command</h3>
+                <p class="text-sm text-stone-700">The codebase makes 1144 Docker API calls and 46 direct <code>exec.Command</code> invocations. Extensive programmatic control over the Docker daemon. Any prompt injection reaching the LLM could weaponize these code paths.</p>
+                <div class="mt-2 text-xs font-mono text-orange-800 bg-orange-100 p-2 rounded">Static pattern count — 518 Go source files</div>
+            </div>
+
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-5 avoid-page-break">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-bold text-stone-800 bg-yellow-400 px-2 py-0.5 rounded">MEDIUM</span>
+                    <span class="text-xs font-mono text-stone-500">Design Limitation</span>
+                </div>
+                <h3 class="font-bold text-stone-900 mb-2">Hardcoded 10-Minute LLM Timeout</h3>
+                <p class="text-sm text-stone-700">Non-configurable 10-minute timeout makes PentAGI incompatible with local CPU-based LLMs. Effectively forces cloud API dependency (OpenAI/Anthropic), breaking air-gap security for any isolated deployment.</p>
+                <div class="mt-2 text-xs font-mono text-yellow-800 bg-yellow-100 p-2 rounded">Confirmed: gemma3:4b + qwen3:1.7b both timed out</div>
+            </div>
+
+            <div class="bg-green-50 border-l-4 border-green-500 rounded-lg p-5 avoid-page-break">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-bold text-white bg-green-700 px-2 py-0.5 rounded">POSITIVE</span>
+                    <span class="text-xs font-mono text-stone-500">Defense Works</span>
+                </div>
+                <h3 class="font-bold text-stone-900 mb-2">Hardening Controls Effective</h3>
+                <p class="text-sm text-stone-700">Read-only filesystem blocked SSH key generation at <code>/root/.ollama/id_ed25519</code>. DinD evasion detected (<code>docker_inside=false</code>). AI Gateway intercepted 100% of agent traffic with zero false negatives. 0 hardcoded secrets in source.</p>
+                <div class="mt-2 text-xs font-mono text-green-800 bg-green-100 p-2 rounded">All defensive controls confirmed effective</div>
+            </div>
+
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 8. REMEDIATION ROADMAP -->
+    <section id="remediation-roadmap" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">8. Deployment Guidance &amp; Remediation Roadmap</h2>
+            <p class="text-stone-600 mt-1">Structured guidance for organizations evaluating PentAGI. Ordered by criticality and implementation timeline.</p>
+        </div>
+
+        <div class="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-1 before:bg-stone-300">
+
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-red-600 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow">1</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-red-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-red-700 text-lg">Mandatory Prerequisites</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">Before ANY deployment</span>
+                    </div>
+                    <ul class="text-sm text-stone-700 space-y-2 mt-2">
+                        <li><strong>[M1]</strong> Deploy ONLY in a dedicated, sacrificial VM with no production data or services.</li>
+                        <li><strong>[M2]</strong> NEVER use real customer API keys or credentials inside the PentAGI environment.</li>
+                        <li><strong>[M3]</strong> Deploy an AI Security Gateway (or equivalent proxy) on all agent-to-LLM traffic.</li>
+                        <li><strong>[M4]</strong> Enable network egress logging and alerting for unexpected external connections.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-orange-500 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow">2</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-stone-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-stone-800 text-lg">Architecture Hardening</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">Short-term (30 days)</span>
+                    </div>
+                    <ul class="text-sm text-stone-700 space-y-2 mt-2">
+                        <li><strong>[A1]</strong> Consider Docker socket proxy (e.g., Tecnativa/docker-socket-proxy) to restrict API surface to required operations only.</li>
+                        <li><strong>[A2]</strong> Run the container as a non-root user where feasible — submit upstream patch to the project.</li>
+                        <li><strong>[A3]</strong> Keep <code>DOCKER_NET_ADMIN=false</code> (default). Document this explicitly in ops runbooks.</li>
+                        <li><strong>[A4]</strong> Implement time-boxed sessions with automatic container teardown after each engagement.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-yellow-500 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow">3</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-stone-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-stone-800 text-lg">LLM Backend Hardening</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">Medium-term (60 days)</span>
+                    </div>
+                    <ul class="text-sm text-stone-700 space-y-2 mt-2">
+                        <li><strong>[L1]</strong> Extend the AI Gateway ruleset with target-specific sensitive data patterns (hostnames, internal CIDRs, project names).</li>
+                        <li><strong>[L2]</strong> Switch Gateway to <strong>enforce</strong> mode once baseline false-positive rate is acceptable.</li>
+                        <li><strong>[L3]</strong> Integrate Gateway logs with SIEM for cross-session behavioral analysis.</li>
+                        <li><strong>[L4]</strong> Upstream: request configurable LLM timeout to enable local/GPU model support.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active avoid-page-break">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-green-500 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow">4</div>
+                <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded shadow border border-stone-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-bold text-stone-800 text-lg">Ongoing Research &amp; Monitoring</h3>
+                        <span class="text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">Continuous</span>
+                    </div>
+                    <ul class="text-sm text-stone-700 space-y-2 mt-2">
+                        <li><strong>[R1]</strong> Repeat dynamic analysis with a GPU-accelerated local LLM to observe full agent behavior without cloud dependency.</li>
+                        <li><strong>[R2]</strong> Test Mock LLM in <strong>malicious</strong> mode to measure Gateway enforcement efficacy against adversarial inputs.</li>
+                        <li><strong>[R3]</strong> Monitor upstream PentAGI for new versions addressing docker.sock dependency.</li>
+                        <li><strong>[R4]</strong> Publish Mock LLM + AI Gateway as standalone open-source tools for the AI agent security community.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <hr class="section-separator">
+
+    <!-- 9. VERDICT -->
+    <section id="verdict" class="space-y-6">
+        <div class="border-b border-stone-300 pb-2">
+            <h2 class="text-2xl font-bold text-stone-900">9. Research Verdict</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-red-900 text-white rounded-xl p-6 shadow-lg avoid-page-break">
+                <div class="text-xs font-bold uppercase tracking-widest text-red-300 mb-3">Verdict</div>
+                <div class="text-2xl font-black mb-3">DANGEROUS<br>BY DESIGN</div>
+                <p class="text-sm text-red-200 leading-relaxed">PentAGI is not malware, but its architecture mandates host-level Docker control. Any installation in a shared environment creates a container escape path available to the LLM backend.</p>
+            </div>
+            <div class="bg-orange-800 text-white rounded-xl p-6 shadow-lg avoid-page-break">
+                <div class="text-xs font-bold uppercase tracking-widest text-orange-300 mb-3">For Production Use</div>
+                <div class="text-2xl font-black mb-3">NOT<br>RECOMMENDED</div>
+                <p class="text-sm text-orange-200 leading-relaxed">Without a dedicated, isolated VM with no adjacent sensitive workloads, real credentials, or production infrastructure, the risk is unacceptable.</p>
+            </div>
+            <div class="bg-green-900 text-white rounded-xl p-6 shadow-lg avoid-page-break">
+                <div class="text-xs font-bold uppercase tracking-widest text-green-300 mb-3">For Research Use</div>
+                <div class="text-2xl font-black mb-3">SAFE WITH<br>CONTROLS</div>
+                <p class="text-sm text-green-200 leading-relaxed">With DinD isolation, read-only filesystem, fake API keys, network air-gap, and AI Security Gateway, PentAGI is safe for controlled security research and case studies.</p>
+            </div>
+        </div>
+        <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm avoid-page-break">
+            <h3 class="font-bold text-stone-800 mb-3">Three Critical Design Limitations</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-start gap-3">
+                    <span class="text-red-600 text-xl font-black">1</span>
+                    <div><strong class="text-stone-900">docker.sock mandatory</strong><br><span class="text-sm text-stone-600">Grants root access to the host Docker daemon. Non-negotiable for PentAGI to function.</span></div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-red-600 text-xl font-black">2</span>
+                    <div><strong class="text-stone-900">10-minute LLM timeout</strong><br><span class="text-sm text-stone-600">Hardcoded, non-configurable. Incompatible with local CPU inference. Forces cloud API dependency.</span></div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-red-600 text-xl font-black">3</span>
+                    <div><strong class="text-stone-900">No degraded mode</strong><br><span class="text-sm text-stone-600">If Docker or LLM is unavailable, PentAGI halts completely. No graceful fallback.</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PDF TECHNICAL FINDINGS (print-only) -->
+    <section id="technical-findings-print" class="print-only space-y-4">
+        <div class="border-b-4 border-amber-500 pb-2 mb-6">
+            <h2 class="text-2xl font-bold text-stone-900">Detailed Technical Findings</h2>
+            <p class="text-stone-600 mt-1">All seven findings from static and dynamic analysis phases.</p>
+        </div>
+        <div id="print-findings-container"></div>
+    </section>
+
+</main>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="fixed inset-0 bg-stone-900 bg-opacity-75 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4 screen-only">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-stone-300">
+        <div class="flex justify-between items-center p-5 border-b border-stone-200 bg-stone-50">
+            <h3 id="modal-title" class="text-xl font-black text-stone-900"></h3>
+            <button id="modal-close" class="text-stone-400 hover:text-stone-800 transition font-bold text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-6 overflow-y-auto" id="modal-content"></div>
+        <div class="p-4 border-t border-stone-200 bg-stone-50 flex justify-end">
+            <button id="modal-close-btn" class="px-5 py-2 bg-stone-800 text-white rounded font-bold hover:bg-stone-700 transition">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="bg-stone-900 text-stone-400 mt-16 py-8 border-t-4 border-red-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row justify-between items-start gap-4">
+            <div>
+                <div class="text-lg font-black text-white tracking-tighter">&#11200; MK SCORPIOSEC</div>
+                <div class="text-sm mt-1">AI Security Operations Research</div>
+                <div class="text-xs mt-2 text-stone-500">Case Study #2 — PentAGI Security Research | April 2026</div>
+            </div>
+            <div class="text-right text-xs text-stone-500 space-y-1">
+                <div>Research conducted in an isolated, air-gapped sandbox environment.</div>
+                <div>No real systems, credentials, or production data were used or exposed.</div>
+                <div>All findings relate to the open-source PentAGI project by vxcontrol.</div>
+                <div class="mt-2 font-bold text-stone-400">Published for the security research community.</div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Watermark overlay -->
+<div id="wm-overlay"></div>
+
+<script>
+    const rawFindingsData = [
+        {
+            id: 'STATIC-001',
+            title: 'Docker Socket Mount — Full Host Escape Path',
+            severity: 'CRITICAL',
+            cvss: '9.8',
+            owasp: 'T1611 — Escape to Host',
+            quickWin: 'Use docker-socket-proxy to restrict Docker API surface',
+            description: 'The docker-compose configuration mounts /var/run/docker.sock directly into the PentAGI container. This grants the agent (and any LLM it communicates with) complete control over the host Docker daemon — including the ability to create privileged containers, mount host volumes, and achieve root-level code execution on the underlying host.',
+            impact: 'Full host compromise. An attacker achieving prompt injection against the LLM backend can direct PentAGI to create a new privileged container mounting the host filesystem, achieving root shell on the physical host. All adjacent containers and their secrets are accessible.',
+            poc: '# docker-compose.yml line 176\n${PENTAGI_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock\n\n# Escape vector (conceptual):\n# docker run -v /:/host --privileged --pid=host debian chroot /host',
+            remediation: '1. Replace raw docker.sock with Tecnativa docker-socket-proxy\n2. Restrict allowed API methods to only what PentAGI requires\n3. Deploy ONLY in dedicated sacrificial VM\n4. Never co-locate with production services'
+        },
+        {
+            id: 'STATIC-002',
+            title: 'Container Execution as root:root',
+            severity: 'CRITICAL',
+            cvss: '9.1',
+            owasp: 'T1078.003 — Valid Accounts: Local Accounts',
+            quickWin: 'Add USER directive in Dockerfile (submit upstream PR)',
+            description: 'The main PentAGI service container is explicitly configured with user: root:root in docker-compose.yml. This means all agent processes, LLM communication handlers, and command execution operate with maximum Unix privileges. Combined with docker.sock access, any code path reached by the LLM is running as root.',
+            impact: 'Any successful command injection via the LLM interface or agent logic executes as root inside the container. With docker.sock also mounted, privilege escalation to host root is trivially achievable.',
+            poc: '# docker-compose.yml line 180\nuser: root:root\n\n# Confirmed dynamically — container started as root\n# T+0s: chmod attempt on /root/.ollama/ (root-owned path)',
+            remediation: '1. Create a dedicated non-root user in the Dockerfile (e.g., pentagi:pentagi, UID 1000)\n2. Adjust volume permissions accordingly\n3. Submit upstream PR to the vxcontrol/pentagi repository'
+        },
+        {
+            id: 'STATIC-003',
+            title: 'NET_ADMIN Capability — Host Network Manipulation',
+            severity: 'CRITICAL',
+            cvss: '8.0',
+            owasp: 'T1557 — Adversary-in-the-Middle',
+            quickWin: 'Keep DOCKER_NET_ADMIN=false (default) and document explicitly',
+            description: 'The DOCKER_NET_ADMIN environment variable (default: false) can enable full Linux NET_ADMIN capability for spawned containers. When enabled, this allows ARP table manipulation, packet sniffing via promiscuous mode, routing table changes, and firewall rule modification — all at the host network level.',
+            impact: 'If activated by misconfiguration or by a prompt-injected LLM instruction, an agent with NET_ADMIN can perform ARP spoofing to intercept traffic from adjacent hosts, capture credentials, or redirect network traffic. This extends the attack surface beyond the Docker host to the entire LAN segment.',
+            poc: '# docker-compose.yml line 161\nDOCKER_NET_ADMIN=${DOCKER_NET_ADMIN:-false}\n\n# If set to true, enables:\n# arp -s <target_ip> <attacker_mac>  # ARP poisoning\n# tcpdump -i any                     # Promiscuous sniff',
+            remediation: '1. Keep DOCKER_NET_ADMIN=false at all times in production-adjacent environments\n2. Remove the variable from docker-compose.yml if NET_ADMIN is never needed\n3. Add explicit documentation in deployment runbooks warning against enabling this flag'
+        },
+        {
+            id: 'STATIC-004',
+            title: '1144 Docker API Calls + 46 exec.Command Invocations',
+            severity: 'CRITICAL',
+            cvss: '8.5',
+            owasp: 'T1059 — Command and Scripting Interpreter',
+            quickWin: 'Audit which API calls are strictly necessary; restrict via socket proxy',
+            description: 'Static analysis identified 1144 Docker API call sites and 46 direct exec.Command invocations across the Go codebase. This extensive programmatic control surface means that any prompt injection reaching the LLM backend has a rich set of weaponizable code paths available — from creating containers to executing arbitrary shell commands.',
+            impact: 'A compromised LLM or successful prompt injection attack against PentAGI can leverage these code paths to: create escape containers, execute OS commands on the host, exfiltrate files via Docker volume operations, or establish persistent backdoors. The 46 exec.Command sites are particularly high-risk if any accept LLM-influenced input without sanitization.',
+            poc: '# Pattern counts from static analysis:\n# Docker API calls:    1144 occurrences\n# exec.Command calls:    46 occurrences\n# Secret/key refs:      387 occurrences\n# Filesystem ops:       169 occurrences\n# Network connections:   62 occurrences',
+            remediation: '1. Map which exec.Command calls accept LLM-influenced input\n2. Sanitize all shell arguments derived from LLM outputs\n3. Restrict Docker API via socket proxy to minimum required methods\n4. Consider code review of all LLM output → exec.Command data flows'
+        },
+        {
+            id: 'STATIC-005',
+            title: 'DOCKER_HOST Environment Variable Exposure',
+            severity: 'HIGH',
+            cvss: '7.5',
+            owasp: 'T1552.007 — Container API',
+            quickWin: 'Remove from environment if socket proxy is used instead',
+            description: 'DOCKER_HOST is set to unix:///var/run/docker.sock within the container environment, explicitly configuring direct communication with the host Docker socket. This is redundant with the socket mount but also means any process inside the container that reads this environment variable can locate and communicate with the Docker daemon.',
+            impact: 'Provides an explicit, discoverable path to the Docker API for any malicious code, injected payload, or compromised dependency executing inside the container.',
+            poc: '# docker-compose.yml line 157\nDOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}\n\n# Exploitable by any in-container process:\n# curl --unix-socket /var/run/docker.sock http://localhost/containers/json',
+            remediation: '1. If implementing docker-socket-proxy, update DOCKER_HOST to point to the proxy instead\n2. Restrict container environment variable exposure in production deployments'
+        },
+        {
+            id: 'DYN-001',
+            title: 'Docker Socket Mandatory — No Degraded Mode',
+            severity: 'MEDIUM',
+            cvss: '6.0',
+            owasp: 'Design Flaw — No Fail-Safe Default',
+            quickWin: 'Request upstream implementation of Docker-optional operation mode',
+            description: 'Confirmed dynamically in Phase 2.0: PentAGI completely halts when docker.sock is unavailable (T+16s: "Docker runtime client initialization failed"). There is no graceful degradation, no reduced-functionality mode, and no warning to the operator. The tool is entirely non-functional without root Docker access.',
+            impact: 'Any deployment of PentAGI necessarily accepts the full docker.sock risk profile. Operators cannot choose to use PentAGI in a reduced-risk configuration. This eliminates the option of defense-in-depth through capability reduction.',
+            poc: '# Phase 2.0 sandbox log (T+16s):\n"Docker runtime client initialization failed"\n# Process stops — no agent activity, no further logs\n# PentAGI requires docker.sock to be its core runtime',
+            remediation: '1. Submit feature request/issue to vxcontrol/pentagi for Docker-optional operation mode\n2. Document this behavior prominently in security runbooks\n3. Always deploy with the full awareness that docker.sock access is non-negotiable'
+        },
+        {
+            id: 'DYN-002',
+            title: '73.7% of Agent Traffic Contains Threat Patterns',
+            severity: 'INFO',
+            cvss: 'N/A',
+            owasp: 'OWASP LLM01:2025 — Prompt Injection',
+            quickWin: 'Deploy AI Security Gateway in enforce mode for production use',
+            description: 'In Phase 2.2, 202 out of 274 intercepted requests (73.7%) triggered threat pattern matches in the AI Security Gateway. This is EXPECTED behavior for a penetration testing agent — its system prompts legitimately instruct the LLM to perform actions that look like attack traffic. However, this demonstrates that without a gateway, a compromised LLM would have high-impact, ready-to-execute instructions available to weaponize.',
+            impact: 'Without the Gateway, a malicious or prompt-injected LLM has immediate access to a full pentest toolkit: IP enumeration, credential file access, netcat listeners, and pipe-to-bash execution chains. The 24 prompt injection detections show PentAGI itself uses bypass-style language in system prompts — demonstrating the thin line between legitimate use and weaponization.',
+            poc: '# Gateway stats (Phase 2.2):\nTotal requests intercepted: 274\nRequests with threats:      202 (73.7%)\nEXFILTRATION matches:       462\nPROMPT_INJECTION matches:    24\nTop patterns: IPs (178), /etc/passwd (136), nc -l (96)',
+            remediation: '1. Always run AI Security Gateway (or equivalent) between PentAGI and its LLM backend\n2. Configure enforce mode to block EXFILTRATION patterns that originate from unexpected sources\n3. Build custom rules for your deployment context (target hostnames, internal subnets, etc.)\n4. Review Gateway logs after every engagement for anomalous patterns'
+        }
+    ];
+
+    function initCharts() {
+        // Risk score donut
+        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+        new Chart(scoreCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Score', 'Risk'],
+                datasets: [{
+                    data: [18, 82],
+                    backgroundColor: ['#eab308', '#b91c1c'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { label: function(c) { return ' ' + c.label + ': ' + c.raw; } } }
+                }
+            }
+        });
+
+        // Static code patterns bar
+        const patternsCtx = document.getElementById('patternsChart').getContext('2d');
+        new Chart(patternsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Docker API', 'Secrets/Keys', 'Filesystem', 'Exec Cmd', 'Network'],
+                datasets: [{
+                    label: 'Occurrences',
+                    data: [1144, 387, 169, 46, 62],
+                    backgroundColor: ['#b91c1c', '#ea580c', '#eab308', '#dc2626', '#0ea5e9'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // Gateway detections pie
+        const gatewayCtx = document.getElementById('gatewayChart').getContext('2d');
+        new Chart(gatewayCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['EXFILTRATION', 'PROMPT_INJECTION', 'Clean Traffic'],
+                datasets: [{
+                    data: [462, 24, 72],
+                    backgroundColor: ['#b91c1c', '#7c3aed', '#22c55e'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                    tooltip: { callbacks: { label: function(c) { return ' ' + c.label + ': ' + c.raw; } } }
+                }
+            }
+        });
+    }
+
+    function getSeverityStyles(severity) {
+        if (severity === 'CRITICAL') return { icon: '&#128308;', bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300', headerBg: '#fef2f2', headerBorder: '#fca5a5' };
+        if (severity === 'HIGH')     return { icon: '&#128992;', bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', headerBg: '#fff7ed', headerBorder: '#fdba74' };
+        if (severity === 'MEDIUM')   return { icon: '&#128993;', bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', headerBg: '#fefce8', headerBorder: '#fde047' };
+        return { icon: '&#128994;', bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300', headerBg: '#f0fdf4', headerBorder: '#86efac' };
+    }
+
+    function renderCards(filter = 'all') {
+        const grid = document.getElementById('findings-grid');
+        grid.innerHTML = '';
+        const filtered = rawFindingsData.filter(f => {
+            if (filter === 'all') return true;
+            if (filter === 'INFO') return f.severity === 'INFO' || f.severity === 'MEDIUM';
+            return f.severity === filter;
+        });
+        filtered.forEach(f => {
+            const s = getSeverityStyles(f.severity);
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-sm border border-stone-200 p-5 flex flex-col justify-between hover:shadow-md transition';
+            card.innerHTML = `
+                <div>
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs font-bold font-mono text-stone-500">${f.id}</span>
+                        <span class="${s.bg} ${s.text} ${s.border} border px-2 py-1 rounded text-xs font-bold flex items-center gap-1">${s.icon} ${f.severity}</span>
+                    </div>
+                    <h3 class="text-base font-bold text-stone-900 leading-tight mb-2">${f.title}</h3>
+                    <p class="text-sm text-stone-600 line-clamp-2 mb-4">${f.description}</p>
+                </div>
+                <div class="mt-auto border-t border-stone-100 pt-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-stone-500">CVSS: ${f.cvss}</span>
+                        <button class="text-sm font-bold text-red-700 hover:text-red-900 transition flex items-center gap-1 open-modal-btn screen-only" data-id="${f.id}">
+                            View Details &rarr;
+                        </button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+        document.querySelectorAll('.open-modal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => openModal(e.currentTarget.getAttribute('data-id')));
+        });
+    }
+
+    function setupFilters() {
+        const buttons = document.querySelectorAll('#static-filter-container button');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                buttons.forEach(b => { b.classList.remove('bg-stone-800','text-white'); b.classList.add('bg-white','text-stone-800'); });
+                const t = e.currentTarget;
+                t.classList.remove('bg-white','text-stone-800');
+                t.classList.add('bg-stone-800','text-white');
+                renderCards(t.getAttribute('data-filter'));
+            });
+        });
+    }
+
+    const modal = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalContent = document.getElementById('modal-content');
+
+    function openModal(id) {
+        const f = rawFindingsData.find(x => x.id === id);
+        if (!f) return;
+        const s = getSeverityStyles(f.severity);
+        modalTitle.innerHTML = `<span class="text-stone-500 font-mono text-sm mr-2">${f.id}</span>${f.title}`;
+        modalContent.innerHTML = `
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-stone-50 p-3 rounded border border-stone-200">
+                    <div class="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Severity</div>
+                    <div class="font-bold flex items-center gap-1">${s.icon} ${f.severity}</div>
+                </div>
+                <div class="bg-stone-50 p-3 rounded border border-stone-200">
+                    <div class="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">CVSS v3.1</div>
+                    <div class="font-bold text-stone-900">${f.cvss}</div>
+                </div>
+                <div class="bg-stone-50 p-3 rounded border border-stone-200 col-span-2">
+                    <div class="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">MITRE / OWASP</div>
+                    <div class="font-bold text-stone-900 truncate">${f.owasp}</div>
+                </div>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <h4 class="text-sm font-extrabold text-stone-900 uppercase border-b-2 border-red-700 pb-1 mb-2 inline-block">Technical Description</h4>
+                    <p class="text-stone-700 text-sm leading-relaxed">${f.description}</p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-extrabold text-stone-900 uppercase border-b-2 border-red-700 pb-1 mb-2 inline-block">Impact</h4>
+                    <p class="text-stone-700 text-sm leading-relaxed">${f.impact}</p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-extrabold text-stone-900 uppercase border-b-2 border-red-700 pb-1 mb-2 inline-block">Evidence / PoC</h4>
+                    <pre class="bg-stone-900 text-stone-300 p-4 rounded text-xs font-mono overflow-x-auto whitespace-pre-wrap">${f.poc}</pre>
+                </div>
+                <div class="bg-stone-100 p-5 rounded-lg border border-stone-200">
+                    <h4 class="text-sm font-extrabold text-stone-900 uppercase mb-3 flex items-center gap-2">&#9881; Remediation &amp; Quick Win</h4>
+                    <div class="text-xs font-bold text-green-700 bg-green-100 inline-block px-2 py-1 rounded mb-3 border border-green-300">Quick Win: ${f.quickWin}</div>
+                    <pre class="text-stone-700 text-sm whitespace-pre-wrap font-sans">${f.remediation}</pre>
+                </div>
+            </div>
+        `;
+        document.body.classList.add('overflow-hidden');
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    function renderPrintFindings() {
+        const container = document.getElementById('print-findings-container');
+        if (!container) return;
+        container.innerHTML = '';
+        rawFindingsData.forEach((f, idx) => {
+            const s = getSeverityStyles(f.severity);
+            const isFirst = idx === 0;
+            const wrap = document.createElement('div');
+            wrap.className = 'prt-finding-wrap' + (isFirst ? ' prt-section-first' : ' prt-finding-page-break');
+
+            wrap.innerHTML = `
+                <div style="background:${s.headerBg};border:1px solid ${s.headerBorder};border-radius:8px;padding:16px 20px;margin-bottom:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                        <span style="font-family:monospace;font-size:0.75rem;color:#78716c;font-weight:700;">${f.id}</span>
+                        <span style="font-size:0.75rem;font-weight:800;padding:2px 10px;border-radius:4px;background:${f.severity==='CRITICAL'?'#b91c1c':f.severity==='HIGH'?'#c2410c':f.severity==='MEDIUM'?'#b45309':'#15803d'};color:white;">${f.severity} — CVSS ${f.cvss}</span>
+                    </div>
+                    <h3 style="font-size:1.05rem;font-weight:900;color:#1c1917;margin:0 0 6px 0;">${f.title}</h3>
+                    <div style="font-size:0.75rem;color:#57534e;font-weight:600;">${f.owasp}</div>
+                </div>
+
+                <div class="prt-finding-sub-block" style="background:white;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 0 0;padding:16px 20px;">
+                    <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#b91c1c;border-bottom:2px solid #b91c1c;display:inline-block;margin-bottom:8px;">Technical Description</div>
+                    <p style="font-size:0.82rem;color:#374151;line-height:1.55;margin:0;">${f.description}</p>
+                </div>
+
+                <div class="prt-finding-sub-block" style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;padding:16px 20px;">
+                    <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#b91c1c;border-bottom:2px solid #b91c1c;display:inline-block;margin-bottom:8px;">Impact</div>
+                    <p style="font-size:0.82rem;color:#374151;line-height:1.55;margin:0;">${f.impact}</p>
+                </div>
+
+                <div class="prt-finding-sub-block" style="background:#1c1917;border:1px solid #1c1917;border-top:none;padding:16px 20px;border-radius:0 0 4px 4px;">
+                    <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#f59e0b;margin-bottom:8px;">Evidence / PoC</div>
+                    <pre style="font-family:monospace;font-size:0.73rem;color:#a8a29e;white-space:pre-wrap;margin:0;">${f.poc}</pre>
+                </div>
+
+                <div class="prt-finding-sub-block prt-finding-sub-block-last" style="background:#f0fdf4;border:1px solid #bbf7d0;border-top:none;border-radius:0 0 8px 8px;padding:16px 20px;">
+                    <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#15803d;border-bottom:2px solid #15803d;display:inline-block;margin-bottom:8px;">Remediation</div>
+                    <div style="font-size:0.73rem;font-weight:700;color:#15803d;background:#dcfce7;display:inline-block;padding:2px 10px;border-radius:4px;border:1px solid #86efac;margin-bottom:10px;margin-left:12px;">Quick Win: ${f.quickWin}</div>
+                    <pre style="font-family:system-ui,sans-serif;font-size:0.82rem;color:#374151;white-space:pre-wrap;margin:0;">${f.remediation}</pre>
+                </div>
+            `;
+            container.appendChild(wrap);
+        });
+    }
+
+    function exportDocx() {
+        alert('DOCX export: use window.print() to save as PDF, or implement docx generation with the loaded docx@7.8.2 library.');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initCharts();
+        renderCards();
+        setupFilters();
+        renderPrintFindings();
+    });
+</script>
+</body>
+</html>
