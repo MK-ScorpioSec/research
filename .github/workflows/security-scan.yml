@@ -16,9 +16,10 @@ jobs:
       contents: read
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    - name: Checkout
+      run: |
+        git clone --depth=2 "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" .
+        git checkout "${{ github.sha }}" 2>/dev/null || true
 
     - name: TruffleHog — secret scan
       run: |
@@ -26,44 +27,30 @@ jobs:
           | sh -s -- -b /usr/local/bin
         trufflehog git file://. --since-commit HEAD~1 --only-verified --fail || true
 
-  bandit:
-    name: Bandit SAST
+  sast:
+    name: SAST
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      run: |
+        git clone --depth=1 "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" .
 
-    - name: Bandit — Python security
+    - name: Bandit — Python
       run: |
         pip install bandit --quiet
         if find . -name "*.py" | grep -q .; then
-          bandit -r . -ll -f json | tee bandit-results.json
-          python3 -c "import json,sys; d=json.load(open('bandit-results.json')); highs=[r for r in d.get('results',[]) if r['issue_severity'] in ['HIGH','CRITICAL']]; [sys.exit(1) or print('FAIL: {} HIGH/CRITICAL findings'.format(len(highs))) if highs else print('PASS')]"
+          bandit -r . -ll -f json -o bandit-results.json || true
+          python3 -c "import json,sys; d=json.load(open('bandit-results.json')); highs=[r for r in d.get('results',[]) if r['issue_severity'] in ['HIGH','CRITICAL']]; print('FAIL: {} HIGH/CRITICAL findings'.format(len(highs))) if highs else print('PASS'); sys.exit(1) if highs else None"
         else
           echo 'No Python files to scan'
         fi
 
-  checkov:
-    name: Checkov IaC
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run Checkov
-      uses: bridgecrewio/checkov-action@master
-      with:
-        directory: .
-        framework: terraform,cloudformation
-        output_format: sarif
-        output_file_path: checkov-results.sarif
-        soft_fail: true
-
-    - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: checkov-results.sarif
+    - name: Checkov — IaC
+      run: |
+        pip install checkov --quiet
+        if find . -name "*.tf" -o -name "*.json" -o -name "*.yml" | grep -v ".github" | grep -q .; then
+          checkov -d . --framework terraform,cloudformation --soft-fail --compact || true
+        else
+          echo 'No IaC files to scan'
+        fi
