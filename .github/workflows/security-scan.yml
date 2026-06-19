@@ -38,17 +38,7 @@ jobs:
         pip install bandit --quiet
         if find . -name "*.py" | grep -q .; then
           bandit -r . -ll -f json | tee bandit-results.json
-          python3 -c "
-import json, sys
-try:
-  d = json.load(open('bandit-results.json'))
-  highs = [r for r in d.get('results',[]) if r['issue_severity'] in ['HIGH','CRITICAL']]
-  if highs:
-    print(f'FAIL: {len(highs)} HIGH/CRITICAL findings')
-    sys.exit(1)
-  print('PASS')
-except: print('PASS')
-"
+          python3 -c "import json,sys; d=json.load(open('bandit-results.json')); highs=[r for r in d.get('results',[]) if r['issue_severity'] in ['HIGH','CRITICAL']]; [sys.exit(1) or print('FAIL: {} HIGH/CRITICAL findings'.format(len(highs))) if highs else print('PASS')]"
         else
           echo 'No Python files to scan'
         fi
