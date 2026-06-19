@@ -1,7 +1,7 @@
 # research
 
 <p align="center">
-<img src="assets/banner.png" alt="research — IaC Security Research. TerraGoat gap analysis: 187 undocumented findings. Banner generated with AI assistance." width="100%" />
+<img src="assets/banner.png" alt="MK ScorpioSec Security Research — IaC and AI agent security analysis. Case studies from real infrastructure and agentic deployments." width="100%" />
 <br><sub>Banner generated with AI assistance · MK ScorpioSec</sub>
 </p>
 
