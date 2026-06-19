@@ -1,5 +1,10 @@
 # Case Study #2 — PentAGI Autonomous AI Agent Security Analysis
 
+<p align="center">
+<img src="assets/banner.png" alt="PentAGI AI Agent Security Analysis — MK ScorpioSec" width="100%" />
+<br><sub>Banner generated with AI assistance · MK ScorpioSec</sub>
+</p>
+
 **Research period:** April 2026  
 **Subject:** [PentAGI](https://pentagi.com/) — autonomous AI-powered penetration testing agent  
 **Classification:** RESEARCH — publicly available codebase  
