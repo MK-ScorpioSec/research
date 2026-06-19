@@ -62,10 +62,7 @@ Static analysis confirmed 24 injection-surface endpoints. A weaponized injection
 
 | File | Description |
 |------|-------------|
-| [`PENTAGI_CASE_STUDY_BRANDING.html`](PENTAGI_CASE_STUDY_BRANDING.html) | Full branded report — print-ready, all charts and visualizations |
-| [`PENTAGI_CASE_STUDY.html`](PENTAGI_CASE_STUDY.html) | Compact research report |
-
-> Open in a modern browser. Reports use Chart.js for visualizations (loaded from CDN).
+| [`Reporte-PentAGI-MK-ScorpioSec-Demo.pdf`](Reporte-PentAGI-MK-ScorpioSec-Demo.pdf) | Full security report — static and dynamic analysis findings |
 
 ---
 
