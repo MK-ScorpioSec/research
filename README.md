@@ -5,7 +5,7 @@
 <br><sub>Banner generated with AI assistance · MK ScorpioSec</sub>
 </p>
 
-> IaC security research — applied findings from real-world infrastructure analysis.
+> Applied security research — IaC and AI agent analysis. Findings from real infrastructure and agentic system deployments.
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-D62828?style=flat-square)](LICENSE)
 [![Security](https://img.shields.io/badge/Security-Policy-blue?style=flat-square)](SECURITY.md)
@@ -17,6 +17,7 @@
 | Study | Description | Status |
 |-------|-------------|--------|
 | [TerraGoat gap analysis](terragoat-2026-04/) | 187 undocumented findings across Checkov, Trivy, and pq-audit. Running only the official scanner shows 23% of actual exposure. | `ready` |
+| [PentAGI AI agent analysis](pentagi-2026-04/) | 4 CRITICAL static findings + 462 exfiltration events across 274 intercepted agent-to-LLM requests. 73.7% threat rate. Score: 18/100 — DANGEROUS BY DESIGN. | `ready` |
 
 ---
 
@@ -26,6 +27,7 @@ Each study applies the full MK ScorpioSec research pipeline:
 - Static analysis with multiple tools (not just the "official" one)
 - Cross-tool gap matrix: what each scanner covers vs. misses
 - Post-quantum cryptography layer via [pq-audit](https://github.com/mk-scorpiosec/pq-audit)
+- For AI agents: behavioral sandbox with instrumented LLM gateway + runtime monitoring
 - Raw evidence published with every finding
 
 ---
@@ -45,6 +47,7 @@ Third-party tools used across studies:
 | [Trivy](https://github.com/aquasecurity/trivy) | Aqua Security | Apache 2.0 |
 | [Checkov](https://github.com/bridgecrewio/checkov) | Bridgecrew / Palo Alto | Apache 2.0 |
 | [TruffleHog](https://github.com/trufflesecurity/trufflehog) | Truffle Security | AGPL-3.0 |
+| [Falco](https://falco.org/) | CNCF / Sysdig | Apache 2.0 |
 
 ---
 
